@@ -6,6 +6,7 @@ import { createDragController } from '../../src/input/DragController';
 import { elasticLine } from '../../src/domain/elastic';
 import { campOf } from '../../src/domain/rules';
 import { MID_Y } from '../../src/config/dimensions';
+import { DROP_MAX_SPEED } from '../../src/config/physics';
 
 let physics: PhysicsWorld;
 const step = (n = 1): void => {
@@ -91,6 +92,20 @@ describe('DragController', () => {
     drag.pointerUp(1);
     step(30);
     expect(Math.hypot(pucks[0]!.velocity().x, pucks[0]!.velocity().y)).toBeLessThan(50);
+  });
+
+  it('balayer puis lâcher devant l’élastique → vitesse plafonnée à DROP_MAX_SPEED', () => {
+    const { pucks, drag } = setup([{ x: 360, y: 1000 }]);
+    drag.pointerDown(1, { x: 360, y: 1000 });
+    for (let y = 1000; y <= 1240; y += 60) {
+      drag.pointerMove(1, { x: 360, y });
+      step(3);
+    }
+    drag.pointerMove(1, { x: 360, y: 900 });
+    step(3);
+    drag.pointerUp(1);
+    const v = pucks[0]!.velocity();
+    expect(Math.hypot(v.x, v.y)).toBeLessThanOrEqual(DROP_MAX_SPEED + 1);
   });
 
   it('reset et destroy relâchent les palets tenus (aucun joint restant)', () => {

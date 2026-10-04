@@ -1,7 +1,7 @@
 import { MouseJoint, Vec2 } from 'planck';
 import type { PhysicsWorld } from '../core/PhysicsWorld';
 import type { Puck } from '../entities/Puck';
-import { DRAG_MAX_FORCE_PER_KG } from '../config/physics';
+import { DRAG_MAX_FORCE_PER_KG, DROP_MAX_SPEED } from '../config/physics';
 import { PUCK_RADIUS } from '../config/dimensions';
 import { campOf, clampToCamp } from '../domain/rules';
 import { elasticLine, launchVelocity } from '../domain/elastic';
@@ -54,8 +54,18 @@ export function createDragController(deps: {
     physics.world.destroyJoint(grab.joint);
     grabs.delete(player);
     const v = launch ? launchVelocity(grab.puck.position(), elasticLine(player), player) : null;
-    if (v) grab.puck.setVelocity(v);
-    else grab.puck.setIgnoreElastic(false);
+    if (v) {
+      grab.puck.setVelocity(v);
+      return;
+    }
+    // Pas de lancer élastique : la vitesse du geste est plafonnée (direction conservée).
+    const cur = grab.puck.velocity();
+    const speed = Math.hypot(cur.x, cur.y);
+    if (speed > DROP_MAX_SPEED) {
+      const k = DROP_MAX_SPEED / speed;
+      grab.puck.setVelocity({ x: cur.x * k, y: cur.y * k });
+    }
+    grab.puck.setIgnoreElastic(false);
   };
 
   return {

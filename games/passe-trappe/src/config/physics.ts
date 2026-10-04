@@ -18,5 +18,7 @@ export const WALL_RESTITUTION = 0.6;
 export const PUCK_LINEAR_DAMPING = 1.2;
 /** Force max du MouseJoint de glisser, par kg de palet. */
 export const DRAG_MAX_FORCE_PER_KG = 2000;
+/** Vitesse max (px/s) d'un palet lâché sans lancer élastique : un geste de la main ne doit pas égaler l'élastique. */
+export const DROP_MAX_SPEED = 300;
 
 export const CATEGORY = { PUCK: 0x1, WALL: 0x2, ELASTIC: 0x4 } as const;
