@@ -19,7 +19,7 @@ async function initPixi(): Promise<Application> {
     background: COLORS.table,
     antialias: true,
     autoDensity: true,
-    resolution: window.devicePixelRatio || 1,
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
   });
   return app;
 }
