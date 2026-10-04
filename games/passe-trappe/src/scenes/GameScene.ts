@@ -16,6 +16,7 @@ import {
 } from '../config/dimensions';
 import { elasticLine, stretchOf } from '../domain/elastic';
 import { campOf, createWinDetector } from '../domain/rules';
+import { ELASTIC_NUDGE_SPEED } from '../config/physics';
 import { createCrossingDetector } from '../domain/crossings';
 import { labelCamp, pickCalc } from '../domain/quiz';
 import { PLAYERS, type Player, type Vec } from '../domain/types';
@@ -61,6 +62,14 @@ const backInFront = (puck: Puck): boolean => {
     const line = elasticLine(pl);
     return pl === 'A' ? p.y < line.y - PUCK_RADIUS : p.y > line.y + PUCK_RADIUS;
   });
+};
+
+/** Palet qui ignore l'élastique mais immobile derrière la ligne : on le pousse vers la cloison. */
+const nudgeIfStuck = (puck: Puck): void => {
+  const v = puck.velocity();
+  if (Math.hypot(v.x, v.y) >= 10) return;
+  const player = campOf(puck.position().y);
+  puck.setVelocity({ x: v.x, y: (player === 'A' ? -1 : 1) * ELASTIC_NUDGE_SPEED });
 };
 
 export function createGameScene(deps: {
@@ -141,7 +150,10 @@ export function createGameScene(deps: {
         puck.syncView(deltaMs);
         counts[campOf(puck.position().y)] += 1;
         const heldNow = PLAYERS.some((pl) => drag.held(pl) === puck);
-        if (!heldNow && puck.ignoresElastic() && backInFront(puck)) puck.setIgnoreElastic(false);
+        if (!heldNow && puck.ignoresElastic()) {
+          if (backInFront(puck)) puck.setIgnoreElastic(false);
+          else nudgeIfStuck(puck);
+        }
       }
       for (const pl of PLAYERS) {
         const held = drag.held(pl);

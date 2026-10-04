@@ -29,3 +29,8 @@ export const VIBRATE_MS = 400;
 export const VIBRATE_AMPLITUDE = 6;
 /** Vitesse max (px/s) d'un mauvais palet relâché : il bouge un peu, sans atteindre le trou. */
 export const WRONG_LAUNCH_SPEED = 120;
+/**
+ * Vitesse (px/s) donnée vers l'avant à un palet immobile resté à cheval sur l'élastique alors qu'il
+ * l'ignore (mauvais palet relâché, saisie annulée) : il repasse devant et l'élastique se réarme.
+ */
+export const ELASTIC_NUDGE_SPEED = 160;

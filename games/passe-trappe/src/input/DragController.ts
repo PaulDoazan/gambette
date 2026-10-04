@@ -106,7 +106,10 @@ export function createDragController(deps: {
       const k = DROP_MAX_SPEED / speed;
       puck.setVelocity({ x: cur.x * k, y: cur.y * k });
     }
-    puck.setIgnoreElastic(false);
+    // Derrière la ligne, l'élastique reste ignoré : la scène ramène le palet devant avant de le réarmer.
+    const line = elasticLine(player);
+    const behind = player === 'A' ? puck.position().y > line.y : puck.position().y < line.y;
+    if (!behind) puck.setIgnoreElastic(false);
   };
 
   return {

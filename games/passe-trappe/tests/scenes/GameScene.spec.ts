@@ -188,6 +188,55 @@ const correctPerCamp = (scene: ReturnType<typeof createGameScene>) => {
   return out;
 };
 
+describe('GameScene — palet à cheval sur l’élastique', () => {
+  const lineA = elasticLine('A');
+  /** Tient un palet de A à l'étirement maximal, après avoir écarté les autres. */
+  const holdStretched = (x: number, wrong: boolean) => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(3),
+      onWin: vi.fn(),
+    });
+    const inA = scene.pucks().filter((p) => campOf(p.position().y) === 'A');
+    const puck = inA.find((p) => scene.isCorrect(p) !== wrong)!;
+    inA.filter((p) => p !== puck).forEach((p, i) => p.setPosition({ x: 100 + i * 130, y: 700 }));
+    puck.setPosition({ x, y: 950 });
+    scene.tick(1000 / 60);
+    scene.drag.pointerDown(1, { x, y: 950 });
+    for (let y = 950; y <= lineA.y + 150; y += 20) {
+      scene.drag.pointerMove(1, { x, y });
+      for (let i = 0; i < 3; i++) scene.tick(1000 / 60);
+    }
+    return { scene, puck };
+  };
+  const settle = (scene: ReturnType<typeof createGameScene>) => {
+    for (let i = 0; i < 180; i++) scene.tick(1000 / 60);
+  };
+
+  for (const x of [360, 650]) {
+    it(`mauvais palet relâché de l’étirement max (x = ${x}) : revient devant l’élastique, réarmé`, () => {
+      const { scene, puck } = holdStretched(x, true);
+      scene.drag.pointerUp(1);
+      settle(scene);
+      expect(puck.position().y + R).toBeLessThan(lineA.y);
+      expect(puck.ignoresElastic()).toBe(false);
+      scene.destroy();
+    });
+  }
+
+  it('palet tenu à l’étirement max puis reset de la saisie : revient devant l’élastique, réarmé', () => {
+    const { scene, puck } = holdStretched(360, false);
+    scene.drag.reset();
+    settle(scene);
+    expect(puck.position().y + R).toBeLessThan(lineA.y);
+    expect(puck.ignoresElastic()).toBe(false);
+    scene.destroy();
+  });
+});
+
 describe('GameScene — calcul', () => {
   it('les blocs de calcul sont affichés sous les palets', () => {
     physics = createPhysicsWorld();
