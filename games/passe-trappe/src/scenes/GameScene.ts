@@ -7,6 +7,7 @@ import { createCalcBlock, type CalcBlock } from '../entities/CalcBlock';
 import { createPuck, type Puck } from '../entities/Puck';
 import { createDragController, type DragController } from '../input/DragController';
 import {
+  CALC_BLOCK,
   CALC_BLOCK_SIZE,
   DESIGN_WIDTH,
   DIVIDER_THICKNESS,
@@ -55,6 +56,50 @@ export function initialPuckPositions(player: Player, count: number): Vec[] {
   return [...row(n1, front), ...row(n2, back, shift)];
 }
 
+/** Désordre initial : décalage aléatoire maximal (px) autour de la grille, et marge de sécurité. */
+const SCATTER = { x: 22, y: 40, tries: 25, margin: 4 } as const;
+
+/** Position valide pour un palet de `player` au départ : dans son camp, devant l'élastique, hors du bloc. */
+const validStart = (p: Vec, player: Player): boolean => {
+  const R = PUCK_RADIUS + SCATTER.margin;
+  if (p.x - R < 0 || p.x + R > DESIGN_WIDTH) return false;
+  const line = elasticLine(player).y;
+  const divider = DIVIDER_THICKNESS / 2;
+  const inCamp =
+    player === 'A'
+      ? p.y - R > MID_Y + divider && p.y + R < line
+      : p.y + R < MID_Y - divider && p.y - R > line;
+  if (!inCamp) return false;
+  const c = CALC_BLOCK[player];
+  const dx = Math.max(Math.abs(p.x - c.x) - CALC_BLOCK_SIZE.w / 2, 0);
+  const dy = Math.max(Math.abs(p.y - c.y) - CALC_BLOCK_SIZE.h / 2, 0);
+  return Math.hypot(dx, dy) > R;
+};
+
+/**
+ * Disposition de départ « un peu désordonnée » : chaque palet de la grille est décalé au hasard
+ * (± SCATTER.x, ± SCATTER.y), en restant valide et sans chevaucher les autres ; après
+ * SCATTER.tries essais infructueux, il garde sa place de grille.
+ */
+export function scatteredPuckPositions(player: Player, count: number, rng: Rng): Vec[] {
+  const pos = initialPuckPositions(player, count);
+  const minGap = 2 * PUCK_RADIUS + SCATTER.margin;
+  pos.forEach((base, i) => {
+    for (let t = 0; t < SCATTER.tries; t++) {
+      const cand = {
+        x: base.x + (rng() * 2 - 1) * SCATTER.x,
+        y: base.y + (rng() * 2 - 1) * SCATTER.y,
+      };
+      const free = pos.every((q, j) => j === i || Math.hypot(q.x - cand.x, q.y - cand.y) > minGap);
+      if (free && validStart(cand, player)) {
+        pos[i] = cand;
+        break;
+      }
+    }
+  });
+  return pos;
+}
+
 /** Le palet lancé est-il revenu entre les deux élastiques, de toute sa taille ? */
 const backInFront = (puck: Puck): boolean => {
   const p = puck.position();
@@ -80,8 +125,9 @@ export function createGameScene(deps: {
   onWin(player: Player): void;
 }): GameScene {
   const { physics } = deps;
+  const rng = deps.rng ?? Math.random;
   const positionsAll = (): Vec[] =>
-    PLAYERS.flatMap((p) => initialPuckPositions(p, deps.pucksPerPlayer));
+    PLAYERS.flatMap((p) => scatteredPuckPositions(p, deps.pucksPerPlayer, rng));
   const view = new Container();
   const board = createBoard(physics);
   view.addChild(board.view);
@@ -97,7 +143,6 @@ export function createGameScene(deps: {
     view.addChild(puck.view);
     return puck;
   });
-  const rng = deps.rng ?? Math.random;
   const calcs = {} as Record<Player, Pair>;
   const crossings = createCrossingDetector();
   let clock = 0;

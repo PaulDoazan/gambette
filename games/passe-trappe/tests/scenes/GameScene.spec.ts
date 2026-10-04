@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWorld';
-import { createGameScene, initialPuckPositions } from '../../src/scenes/GameScene';
+import {
+  createGameScene,
+  initialPuckPositions,
+  scatteredPuckPositions,
+} from '../../src/scenes/GameScene';
 import { campOf } from '../../src/domain/rules';
 import { elasticLine } from '../../src/domain/elastic';
 import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
@@ -163,6 +167,67 @@ describe('initialPuckPositions — bloc de calcul', () => {
       }
     });
   }
+});
+
+describe('scatteredPuckPositions — palets un peu désordonnés', () => {
+  const checkLayout = (pl: 'A' | 'B', pos: { x: number; y: number }[]) => {
+    const line = elasticLine(pl);
+    const c = CALC_BLOCK[pl];
+    for (const p of pos) {
+      expect(campOf(p.y)).toBe(pl);
+      expect(p.x - R).toBeGreaterThanOrEqual(0);
+      expect(p.x + R).toBeLessThanOrEqual(720);
+      if (pl === 'A') {
+        expect(p.y - R).toBeGreaterThan(MID_Y + DIVIDER_THICKNESS / 2);
+        expect(p.y + R).toBeLessThan(line.y);
+      } else {
+        expect(p.y + R).toBeLessThan(MID_Y - DIVIDER_THICKNESS / 2);
+        expect(p.y - R).toBeGreaterThan(line.y);
+      }
+      const dx = Math.max(Math.abs(p.x - c.x) - CALC_BLOCK_SIZE.w / 2, 0);
+      const dy = Math.max(Math.abs(p.y - c.y) - CALC_BLOCK_SIZE.h / 2, 0);
+      expect(Math.hypot(dx, dy)).toBeGreaterThan(R);
+    }
+    for (let i = 0; i < pos.length; i++)
+      for (let j = i + 1; j < pos.length; j++)
+        expect(Math.hypot(pos[i]!.x - pos[j]!.x, pos[i]!.y - pos[j]!.y)).toBeGreaterThan(2 * R);
+  };
+
+  for (let count = 5; count <= 10; count++) {
+    it(`${count} palets : mêmes garanties que la grille, sur plusieurs tirages`, () => {
+      for (let seed = 1; seed <= 20; seed++)
+        for (const pl of ['A', 'B'] as const)
+          checkLayout(pl, scatteredPuckPositions(pl, count, mulberry32(seed)));
+    });
+  }
+
+  it('désordonné : diffère de la grille, déterministe à graine égale', () => {
+    for (const count of [5, 10]) {
+      const grid = initialPuckPositions('A', count);
+      const a = scatteredPuckPositions('A', count, mulberry32(7));
+      expect(a).toEqual(scatteredPuckPositions('A', count, mulberry32(7)));
+      const moved = a.filter((p, i) => Math.hypot(p.x - grid[i]!.x, p.y - grid[i]!.y) > 3);
+      expect(moved.length).toBeGreaterThanOrEqual(Math.ceil(count / 2));
+    }
+  });
+
+  it('la scène part de positions désordonnées, et Rejouer en tire de nouvelles', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(11),
+      onWin: vi.fn(),
+    });
+    const grid = [...initialPuckPositions('A', 5), ...initialPuckPositions('B', 5)];
+    const start = scene.pucks().map((p) => p.position());
+    expect(start.some((p, i) => Math.hypot(p.x - grid[i]!.x, p.y - grid[i]!.y) > 3)).toBe(true);
+    scene.reset();
+    const again = scene.pucks().map((p) => p.position());
+    expect(again.some((p, i) => Math.hypot(p.x - start[i]!.x, p.y - start[i]!.y) > 1)).toBe(true);
+    scene.destroy();
+  });
 });
 
 describe('GameScene — nombre de palets', () => {
