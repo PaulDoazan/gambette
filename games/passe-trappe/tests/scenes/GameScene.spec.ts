@@ -65,4 +65,13 @@ describe('GameScene', () => {
     expect(onWin).not.toHaveBeenCalled();
     scene.destroy();
   });
+
+  it('reset remet aussi la rotation des palets à zéro', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({ physics, onWin: vi.fn() });
+    scene.pucks().forEach((p) => p.body.setAngularVelocity(5));
+    scene.reset();
+    expect(scene.pucks().every((p) => p.body.getAngularVelocity() === 0)).toBe(true);
+    scene.destroy();
+  });
 });

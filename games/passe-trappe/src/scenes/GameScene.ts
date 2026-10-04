@@ -59,6 +59,7 @@ export function createGameScene(deps: {
     const positions = PLAYERS.flatMap((p) => initialPuckPositions(p));
     pucks.forEach((puck, i) => {
       puck.setVelocity({ x: 0, y: 0 });
+      puck.body.setAngularVelocity(0);
       puck.setPosition(positions[i]!);
       puck.setIgnoreElastic(false);
       puck.syncView();
