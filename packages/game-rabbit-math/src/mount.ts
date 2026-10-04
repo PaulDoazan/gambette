@@ -18,10 +18,27 @@ interface Runtime {
   settings: { current: Settings };
 }
 
+// Préfixes WebKit (Safari/iOS) absents des types DOM standard.
+type FsDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+};
+type FsElement = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
+
 // Même cible que le shell (useFullscreen) : l'état plein écran persiste hors du jeu.
+// API absente (iPhone) ou refusée : on ne fait rien, sans exception ni rejet non géré.
 const toggleFullscreen = (): void => {
-  if (document.fullscreenElement) void document.exitFullscreen();
-  else void document.documentElement.requestFullscreen();
+  const doc = document as FsDocument;
+  const el = document.documentElement as FsElement;
+  try {
+    const exit = doc.exitFullscreen ?? doc.webkitExitFullscreen;
+    const enter = el.requestFullscreen ?? el.webkitRequestFullscreen;
+    const active = (doc.fullscreenElement ?? doc.webkitFullscreenElement) != null;
+    const result = active ? exit?.call(doc) : enter?.call(el);
+    void Promise.resolve(result).catch(() => {});
+  } catch {
+    // Non supporté : ignoré.
+  }
 };
 
 const openSettings = (rt: Runtime): void => {
