@@ -98,7 +98,7 @@ export interface GameModule {
 | `types.ts`               | Repris, modifié comme ci-dessus                                              |
 | `registry.ts`            | Repris ; `isAvailable(key, collaboratorCount)` supprimé (plus de seuil)     |
 | `standalone.ts`          | Repris ; contexte sans collaborateurs, gère un `mount` asynchrone           |
-| `exit-button.ts`         | Repris tel quel                                                              |
+| `exit-button.ts`         | Repris ; `data-test` `tower-exit*` → `game-exit*` ; option `{ fullscreen?: boolean }` (défaut `true`) |
 | `mock.ts`, `scoreboard.ts` | Supprimés                                                                  |
 
 Changements vs lehibou-games : suppression de `Collaborator`, `Gender`, `minCollaborators`, `record` ; `mount` peut être **asynchrone** (Pixi `Application.init()` et préchargement d'assets).
@@ -147,7 +147,7 @@ generateQuestions(req: {
 
 ### Comportements
 
-- **`container` du sélecteur** (nouveau) : défaut `document.body`. Le jeu passe son propre élément pour que le sélecteur reste visible quand cet élément est en plein écran (hors de lui, rien n'est affiché).
+- **`container` du sélecteur** (nouveau) : défaut `document.body`. Le jeu passe son propre élément : le sélecteur lui appartient et disparaît avec lui au démontage.
 - **Sélection vide interdite** : comportement existant conservé (boutons de fermeture désactivés + message tant qu'aucun calcul n'est coché).
 - **Store** : ne persiste **que** la sélection de calculs. Validation de forme à la lecture (tableau de `{a, b, op}` numériques, `op` normalisé en `mul` s'il est absent) ; toute donnée invalide ou un `localStorage` indisponible (exception) → valeurs par défaut, sans lever d'erreur.
 - Les réglages propres à un jeu (ex. `rabbitsCount`, `tapMode`) restent dans le jeu, sous sa propre clé.
@@ -174,19 +174,19 @@ export const rabbitMath: GameModule = {
 | Aujourd'hui (app autonome)                         | Dans Gambette                                                             |
 | -------------------------------------------------- | ------------------------------------------------------------------------- |
 | Rendu dans `#game-root`                            | Rendu dans `el`                                                           |
-| Resize basé sur `window.innerWidth/Height`         | Resize basé sur la taille de `el` (`ResizeObserver`)                      |
+| Resize basé sur `window.innerWidth/Height`         | Inchangé (l'hôte occupe tout le viewport) ; écouteur retiré à `unmount()` |
 | `Ticker.shared` global                             | Ticker propre à l'instance, arrêté à `unmount()`                          |
 | Orientation lock sur `document.body`               | Installé sur `el`, retiré à `unmount()`                                   |
-| Plein écran sur `document.documentElement`         | Plein écran sur `el`                                                      |
-| Musique démarrée sans arrêt                        | Arrêtée à `unmount()`                                                     |
+| Plein écran sur `document.documentElement`         | Inchangé — cohérent avec le shell (`useFullscreen` cible aussi la racine, l'état persiste d'un écran à l'autre) |
+| Musique démarrée (`startMusic`)                    | Non branchée : le dépôt rabbit-math ne contient aucun fichier son (`public/assets/sounds/` absent). `Audio.ts` est conservé pour plus tard |
 | Assets via `import.meta.env.BASE_URL`              | Assets via `new URL('./assets/…', import.meta.url)` (embarqués par Vite) |
 | `domain/tables`, `Rng`, `DifficultyConfig`, `QuestionGenerator`, `ui/CalcsPicker*` | Supprimés ; importés de `@gambette/math-sdk` |
 | `Settings.ts` persiste `selectedPairs` + réglages  | `selectedPairs` via `createCalcsStore('rabbit-math')` ; `rabbitsCount`, `tapMode` gardés sous `gambette.rabbit-math.settings` |
-| Pas de sortie                                      | Bouton quitter du SDK → `ctx.onExit()`                                    |
+| Pas de sortie                                      | Bouton quitter du SDK → `ctx.onExit()`, avec `{ fullscreen: false }` (le jeu a déjà son bouton plein écran) |
 
 Restent dans le jeu : `Session`, `sessionConfig`, `manche`, toutes les scènes, entités et systèmes. L'engrenage ouvre `SettingsScene` (Pixi), qui appelle `openCalcsPicker({ initial, container: el })`.
 
-**`unmount()`** : détruit l'application Pixi (canvas inclus), arrête ticker, tweens, musique et monde physique, retire les écouteurs (`resize`, orientation) et tout overlay DOM ouvert (sélecteur). Après `unmount()`, `el` est vide.
+**`unmount()`** : détruit l'application Pixi (canvas inclus), arrête ticker, tweens et monde physique, retire les écouteurs (`resize`, orientation) et tout overlay DOM ouvert (sélecteur). Après `unmount()`, `el` est vide.
 
 **Standalone** : `index.html` + `standalone-entry.ts` appellent `runStandalone(rabbitMath)` ; `pnpm --filter @gambette/game-rabbit-math dev` permet de jouer hors plateforme.
 
