@@ -1,0 +1,27 @@
+{
+  "name": "@gambette/game-passe-trappe",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src tests"
+  },
+  "dependencies": {
+    "@gambette/game-sdk": "workspace:*",
+    "pixi.js": "^8.18.1",
+    "planck": "^1.5.0"
+  },
+  "devDependencies": {
+    "jsdom": "^29.0.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
+  }
+}
