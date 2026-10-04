@@ -1,0 +1,25 @@
+/*
+ * Polices de marque. Vuetify 4 consomme deux custom properties dans toutes ses
+ * règles de typographie (var(--v-font-body, "Roboto"…) / --v-font-heading) :
+ * les définir sur :root rebrande tout l'app (boutons, chips, inputs…) sans
+ * bataille de spécificité. Raleway pour les titres, Montserrat pour le corps.
+ */
+:root {
+  --v-font-body: 'Montserrat', sans-serif;
+  --v-font-heading: 'Raleway', sans-serif;
+}
+
+/*
+ * Déclarations `font-family` explicites, indispensables car :
+ *  1. @nuxt/fonts n'auto-héberge que les familles vues dans un `font-family:`
+ *     (il ignore les custom properties) — sans elles, aucune @font-face n'est
+ *     générée et les polices ne se chargent pas ;
+ *  2. filet de sécurité si une règle Vuetify ne lisait pas les vars ci-dessus.
+ */
+.v-application {
+  font-family: 'Montserrat', sans-serif;
+}
+.v-application :is(h1, h2, h3, h4, h5, h6),
+.v-application [class*='text-h'] {
+  font-family: 'Raleway', sans-serif;
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@gambette/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxi dev",
+    "build": "nuxi generate",
+    "prepare": "nuxi prepare",
+    "typecheck": "nuxi typecheck",
+    "test": "vitest run",
+    "lint": "eslint lib composables games.ts --no-error-on-unmatched-pattern"
+  },
+  "dependencies": {
+    "@gambette/game-rabbit-math": "workspace:*",
+    "@gambette/game-sdk": "workspace:*",
+    "nuxt": "^4.4.8",
+    "vue": "^3.5.0",
+    "vuetify": "^4.1.1"
+  },
+  "devDependencies": {
+    "@nuxt/fonts": "^0.14.0",
+    "jsdom": "^24.0.0",
+    "vite-plugin-vuetify": "^2.1.3",
+    "vitest": "^2.0.0",
+    "vue-tsc": "^2.0.0",
+    "vuetify-nuxt-module": "^0.19.5"
+  }
+}
