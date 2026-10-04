@@ -16,3 +16,11 @@ export const DIVIDER_THICKNESS = 20;
 export const ELASTIC_INSET = 150;
 /** Étirement maximal de l'élastique (px). */
 export const MAX_STRETCH = 110;
+
+/** Bloc de calcul : en haut à droite du camp, du point de vue de son joueur (B est tourné de 180°). */
+export const CALC_BLOCK_SIZE = { w: 230, h: 76 } as const;
+const CALC_BLOCK_OFFSET = DIVIDER_THICKNESS / 2 + 24 + CALC_BLOCK_SIZE.h / 2;
+export const CALC_BLOCK = {
+  A: { x: DESIGN_WIDTH - 24 - CALC_BLOCK_SIZE.w / 2, y: MID_Y + CALC_BLOCK_OFFSET },
+  B: { x: 24 + CALC_BLOCK_SIZE.w / 2, y: MID_Y - CALC_BLOCK_OFFSET },
+} as const;

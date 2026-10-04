@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import { Circle, Vec2, type Body } from 'planck';
 import type { PhysicsWorld, FixtureTag } from '../core/PhysicsWorld';
 import { PUCK_RADIUS } from '../config/dimensions';
@@ -8,8 +8,10 @@ import {
   PUCK_FRICTION,
   PUCK_LINEAR_DAMPING,
   PUCK_RESTITUTION,
+  VIBRATE_AMPLITUDE,
 } from '../config/physics';
 import { COLORS } from '../config/theme';
+import { campOf } from '../domain/rules';
 import type { Vec } from '../domain/types';
 
 export interface Puck {
@@ -23,7 +25,13 @@ export interface Puck {
   /** true : le palet traverse l'élastique (palet tenu ou tout juste lancé). */
   setIgnoreElastic(on: boolean): void;
   ignoresElastic(): boolean;
-  syncView(): void;
+  /** Valeur affichée sur le palet (null : aucune). */
+  setLabel(value: number | null): void;
+  label(): number | null;
+  /** Vibration purement visuelle (ms) autour de la position physique. */
+  vibrate(ms: number): void;
+  isVibrating(): boolean;
+  syncView(dtMs?: number): void;
   destroy(): void;
 }
 
@@ -58,7 +66,22 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   const g = new Graphics();
   drawPuck(g);
   view.addChild(g);
+  const text = new Text({
+    text: '',
+    style: {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: 44,
+      fontWeight: '800',
+      fill: COLORS.puckText,
+    },
+  });
+  text.label = 'value';
+  text.anchor.set(0.5);
+  view.addChild(text);
   let ignoring = false;
+  let value: number | null = null;
+  let vibrateLeft = 0;
+  let vibrateT = 0;
 
   const api: Puck = {
     view,
@@ -88,10 +111,29 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
       });
     },
     ignoresElastic: () => ignoring,
-    syncView: () => {
+    setLabel: (v) => {
+      value = v;
+      text.text = v === null ? '' : String(v);
+    },
+    label: () => value,
+    vibrate: (ms) => {
+      vibrateLeft = ms;
+      vibrateT = 0;
+    },
+    isVibrating: () => vibrateLeft > 0,
+    syncView: (dtMs = 0) => {
       const p = api.position();
-      view.position.set(p.x, p.y);
-      view.rotation = body.getAngle();
+      let dx = 0;
+      if (vibrateLeft > 0) {
+        vibrateLeft = Math.max(0, vibrateLeft - dtMs);
+        vibrateT += dtMs;
+        dx = vibrateLeft > 0 ? Math.sin(vibrateT * 0.09) * VIBRATE_AMPLITUDE : 0;
+      }
+      view.position.set(p.x + dx, p.y);
+      const angle = body.getAngle();
+      view.rotation = angle;
+      // Étiquette droite pour le joueur du camp où se trouve le palet.
+      text.rotation = (campOf(p.y) === 'B' ? Math.PI : 0) - angle;
     },
     destroy: () => {
       physics.world.destroyBody(body);
