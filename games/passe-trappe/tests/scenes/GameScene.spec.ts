@@ -280,7 +280,18 @@ describe('GameScene — calcul', () => {
     scene.destroy();
   });
 
-  it('un palet passe la ligne médiane → les deux calculs changent, une bonne réponse par camp', () => {
+  const settle = (scene: ReturnType<typeof createGameScene>) => {
+    for (let i = 0; i < 25; i++) scene.tick(1000 / 60);
+  };
+  const labelsIn = (scene: ReturnType<typeof createGameScene>, pl: 'A' | 'B') =>
+    new Map(
+      scene
+        .pucks()
+        .filter((p) => campOf(p.position().y) === pl)
+        .map((p) => [p, p.label()] as const),
+    );
+
+  it('un bon palet passe de A à B → seul le calcul de A change, B garde son calcul et ses étiquettes', () => {
     physics = createPhysicsWorld();
     const scene = createGameScene({
       physics,
@@ -290,13 +301,67 @@ describe('GameScene — calcul', () => {
       onWin: vi.fn(),
     });
     const before = { A: scene.calc('A'), B: scene.calc('B') };
-    const mover = scene.pucks().find((p) => campOf(p.position().y) === 'A')!;
+    const labelsB = labelsIn(scene, 'B');
+    const mover = scene.pucks().find((p) => campOf(p.position().y) === 'A' && scene.isCorrect(p))!;
     mover.setPosition({ x: 360, y: 520 }); // camp B, entre la rangée de B (y≈395) et la cloison
-    for (let i = 0; i < 25; i++) scene.tick(1000 / 60);
+    settle(scene);
+    expect(scene.calc('A')).not.toEqual(before.A);
+    expect(scene.calc('B')).toEqual(before.B);
+    for (const [puck, label] of labelsB) expect(puck.label()).toBe(label);
+    expect(correctPerCamp(scene)).toEqual({ A: 1, B: 1 });
+    expect(scene.isCorrect(mover)).toBe(false);
+    const valsB = scene
+      .pucks()
+      .filter((p) => campOf(p.position().y) === 'B')
+      .map((p) => p.label());
+    expect(new Set(valsB).size).toBe(valsB.length);
+    expect(valsB).toHaveLength(6);
+    scene.destroy();
+  });
+
+  it('un palet arrive dans un camp vide → il porte la bonne réponse de ce camp', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(4),
+      onWin: vi.fn(),
+    });
+    // Tous les palets de B partent dans A (B est vidé et renouvelé).
+    scene
+      .pucks()
+      .filter((p) => campOf(p.position().y) === 'B')
+      .forEach((p, i) => p.setPosition({ x: 120 + i * 120, y: 1010 }));
+    settle(scene);
+    const calcB = scene.calc('B');
+    const mover = scene.pucks().find((p) => campOf(p.position().y) === 'A')!;
+    mover.setPosition({ x: 360, y: 520 });
+    settle(scene);
+    expect(scene.calc('B')).toEqual(calcB);
+    expect(scene.isCorrect(mover)).toBe(true);
+    expect(correctPerCamp(scene)).toEqual({ A: 1, B: 1 });
+    scene.destroy();
+  });
+
+  it('passages simultanés dans les deux sens → les deux calculs changent', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(5),
+      onWin: vi.fn(),
+    });
+    const before = { A: scene.calc('A'), B: scene.calc('B') };
+    const fromA = scene.pucks().find((p) => campOf(p.position().y) === 'A')!;
+    const fromB = scene.pucks().find((p) => campOf(p.position().y) === 'B')!;
+    fromA.setPosition({ x: 200, y: 520 });
+    fromB.setPosition({ x: 520, y: 760 });
+    settle(scene);
     expect(scene.calc('A')).not.toEqual(before.A);
     expect(scene.calc('B')).not.toEqual(before.B);
     expect(correctPerCamp(scene)).toEqual({ A: 1, B: 1 });
-    expect(mover.label()).not.toBeNull();
     scene.destroy();
   });
 

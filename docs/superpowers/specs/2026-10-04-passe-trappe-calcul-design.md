@@ -13,7 +13,7 @@ Faire du passe-trappe un jeu de calcul : chaque camp a un calcul (ex. `6 × 8`),
 - Un adulte ouvre l'engrenage, choisit 5 à 10 palets par joueur et les calculs ; le réglage persiste entre deux sessions.
 - Chaque camp affiche son calcul, lisible par son joueur ; dans chaque camp non vide, exactement un palet porte la bonne réponse, les autres des réponses proches et toutes différentes.
 - Le bon palet part avec l'élastique ; un mauvais palet vibre et n'avance que de quelques centimètres.
-- Dès qu'un palet franchit la ligne médiane, les deux calculs changent et tous les palets sont ré-étiquetés.
+- Dès qu'un palet franchit la ligne médiane, le calcul du camp d'où il part change et ses palets sont ré-étiquetés ; le camp d'arrivée garde son calcul et ses étiquettes (le palet arrivé reçoit une nouvelle mauvaise réponse distincte).
 - Toute la chaîne (lint, typecheck, test, build, format:check) reste verte.
 
 ## 2. Décisions
@@ -21,7 +21,7 @@ Faire du passe-trappe un jeu de calcul : chaque camp a un calcul (ex. `6 × 8`),
 | Sujet                 | Décision                                                                                                      |
 | --------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Réglages              | Engrenage dans le jeu → panneau (palets 5–10, « Choisir les calculs »), comme rabbit-math                     |
-| Calculs               | **Un calcul différent par camp** ; les deux changent à chaque passage                                         |
+| Calculs               | **Un calcul différent par camp** ; seul le camp d'où part un palet change de calcul                           |
 | Bonnes réponses       | **Exactement une** par camp non vide                                                                          |
 | Mauvaises réponses    | `generateDistractors(réponse, 'medium', n − 1, rng)` du `math-sdk` (écart 3 à 9, valeurs distinctes)          |
 | Source des calculs    | `createCalcsStore('passe-trappe')` (défaut : 10 multiplications aléatoires) + `openCalcsPicker` du `math-sdk` |
@@ -52,7 +52,7 @@ Faire du passe-trappe un jeu de calcul : chaque camp a un calcul (ex. `6 × 8`),
 
 - Chaque palet affiche un nombre au centre, orienté vers le joueur du camp où il se trouve (rotation 0 en A, π en B), mis à jour quand il change de camp.
 - Dans chaque camp non vide de `n` palets : une bonne réponse (`computeAnswer(pair)`) sur un palet choisi au hasard, et `n − 1` mauvaises réponses distinctes via `generateDistractors(réponse, 'medium', n − 1, rng)`. Toutes les valeurs d'un camp sont distinctes.
-- **Renouvellement** : quand un palet change de camp (passage de la ligne médiane), les **deux** calculs sont re-tirés et **tous** les palets ré-étiquetés selon leur camp courant (le palet qui vient de passer compte dans son nouveau camp). Deux renouvellements successifs sont séparés d'au moins **300 ms** (un palet qui oscille sur la ligne ne provoque qu'un renouvellement).
+- **Renouvellement** : quand un palet passe du camp X au camp Y (passage de la ligne médiane), le calcul de **X** est re-tiré et **tous les palets de X** ré-étiquetés ; **Y garde son calcul et les étiquettes de ses palets**, le palet arrivé reçoit une nouvelle mauvaise réponse proche, distincte de celles de Y (ou la bonne réponse si Y n'en avait plus, camp vide). Passages simultanés dans les deux sens : les deux camps sont renouvelés. Un va-et-vient de moins de **300 ms** sur la ligne ne compte pas (on réagit aux camps stabilisés).
 
 ### Lancer
 

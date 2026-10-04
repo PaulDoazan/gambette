@@ -55,3 +55,16 @@ export function labelCamp(pair: Pair, count: number, rng: Rng): CampLabels | nul
   const values = shuffle([answer, ...wrong.slice(0, count - 1)], rng);
   return { correctIndex: values.indexOf(answer), values };
 }
+
+/**
+ * Une mauvaise réponse proche de la bonne, absente de `existing` : étiquette d'un palet qui arrive
+ * dans un camp dont le calcul ne change pas.
+ */
+export function extraDistractor(pair: Pair, existing: readonly number[], rng: Rng): number {
+  const answer = computeAnswer(pair);
+  const used = new Set([answer, ...existing]);
+  const free = generateDistractors(answer, QUIZ_DIFFICULTY, used.size + 1, rng).filter(
+    (v) => !used.has(v),
+  );
+  return free.length > 0 ? pickFrom(free, rng) : topUp(answer, used, 1)[0]!;
+}

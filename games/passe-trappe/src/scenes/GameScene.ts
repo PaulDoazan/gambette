@@ -17,8 +17,8 @@ import {
 import { elasticLine, stretchOf } from '../domain/elastic';
 import { campOf, createWinDetector } from '../domain/rules';
 import { ELASTIC_NUDGE_SPEED } from '../config/physics';
-import { createCrossingDetector } from '../domain/crossings';
-import { labelCamp, pickCalc } from '../domain/quiz';
+import { createCrossingDetector, type Crossing } from '../domain/crossings';
+import { extraDistractor, labelCamp, pickCalc } from '../domain/quiz';
 import { PLAYERS, type Player, type Vec } from '../domain/types';
 
 export interface GameScene {
@@ -112,18 +112,50 @@ export function createGameScene(deps: {
   const detector = createWinDetector();
   let won = false;
 
-  // Nouveaux calculs pour les deux camps, puis ré-étiquetage de tous les palets.
-  const relabel = (): void => {
-    for (const pl of PLAYERS) {
-      calcs[pl] = pickCalc(deps.pairs, (calcs[pl] as Pair | undefined) ?? null, rng);
-      blocks[pl].setPair(calcs[pl]);
-      const inCamp = pucks.filter((p) => campOf(p.position().y) === pl);
-      const labels = labelCamp(calcs[pl], inCamp.length, rng);
-      inCamp.forEach((p, i) => p.setLabel(labels ? labels.values[i]! : null));
+  const inCampOf = (pl: Player): Puck[] => pucks.filter((p) => campOf(p.position().y) === pl);
+
+  // Nouveau calcul pour un camp et ré-étiquetage de tous ses palets.
+  const renewCamp = (pl: Player): void => {
+    calcs[pl] = pickCalc(deps.pairs, (calcs[pl] as Pair | undefined) ?? null, rng);
+    blocks[pl].setPair(calcs[pl]);
+    const inCamp = inCampOf(pl);
+    const labels = labelCamp(calcs[pl], inCamp.length, rng);
+    inCamp.forEach((p, i) => p.setLabel(labels ? labels.values[i]! : null));
+  };
+
+  // Palets arrivés dans un camp dont le calcul ne change pas : nouvelle mauvaise réponse distincte,
+  // sauf si le camp n'a plus de bonne réponse (il était vide) : le premier arrivé la reçoit.
+  const labelArrivals = (pl: Player, arrivals: readonly Puck[]): void => {
+    const answer = computeAnswer(calcs[pl]);
+    const others = inCampOf(pl).filter((p) => !arrivals.includes(p));
+    let hasCorrect = others.some((p) => p.label() === answer);
+    const existing = others.map((p) => p.label()).filter((v): v is number => v !== null);
+    for (const puck of arrivals) {
+      const value = hasCorrect ? extraDistractor(calcs[pl], existing, rng) : answer;
+      hasCorrect = true;
+      existing.push(value);
+      puck.setLabel(value);
     }
+  };
+
+  // Départ, Rejouer : nouveaux calculs pour les deux camps.
+  const relabelAll = (): void => {
+    for (const pl of PLAYERS) renewCamp(pl);
     crossings.reset(campsNow(), clock);
   };
-  relabel();
+
+  // Passage(s) de la ligne médiane : seul le camp d'où part un palet change de calcul ; le camp
+  // d'arrivée garde son calcul et ses étiquettes, les arrivants reçoivent une étiquette nouvelle.
+  const onCrossings = (list: readonly Crossing[]): void => {
+    const departed = new Set(list.map((c) => c.from));
+    for (const pl of departed) renewCamp(pl);
+    for (const pl of PLAYERS) {
+      if (departed.has(pl)) continue;
+      const arrivals = list.filter((c) => c.to === pl).map((c) => pucks[c.index]!);
+      if (arrivals.length > 0) labelArrivals(pl, arrivals);
+    }
+  };
+  relabelAll();
 
   const placeInitial = (): void => {
     const positions = positionsAll();
@@ -160,7 +192,8 @@ export function createGameScene(deps: {
         const pos = held ? held.position() : null;
         elastics[pl].draw(pos && stretchOf(pos, elasticLine(pl), pl) > 0 ? pos : null);
       }
-      if (crossings.update(campsNow(), clock)) relabel();
+      const crossed = crossings.update(campsNow(), clock);
+      if (crossed.length > 0) onCrossings(crossed);
       const winner = detector.update(counts, deltaMs);
       if (winner && !won) {
         won = true;
@@ -171,7 +204,7 @@ export function createGameScene(deps: {
     reset: () => {
       drag.reset();
       placeInitial();
-      relabel();
+      relabelAll();
       detector.reset();
       won = false;
     },

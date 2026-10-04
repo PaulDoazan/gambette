@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
-import { labelCamp, pickCalc } from '../../src/domain/quiz';
+import { extraDistractor, labelCamp, pickCalc } from '../../src/domain/quiz';
 
 const P68: Pair = { a: 6, b: 8, op: 'mul' };
 const P74: Pair = { a: 7, b: 4, op: 'mul' };
@@ -44,5 +44,26 @@ describe('pickCalc', () => {
 
   it('un seul calcul disponible : on le reprend', () => {
     expect(pickCalc([P68], P68, mulberry32(1))).toEqual(P68);
+  });
+});
+
+describe('extraDistractor', () => {
+  it('mauvaise réponse proche, absente des valeurs existantes, jamais la bonne', () => {
+    const existing = [48, 42, 51, 45, 54];
+    for (let seed = 1; seed <= 30; seed++) {
+      const v = extraDistractor(P68, existing, mulberry32(seed));
+      expect(v).not.toBe(48);
+      expect(existing).not.toContain(v);
+      expect(Math.abs(v - 48)).toBeLessThanOrEqual(9);
+    }
+  });
+
+  it('valeurs proches toutes prises → une valeur libre juste au-delà', () => {
+    const existing = Array.from({ length: 41 }, (_, i) => 28 + i); // 28..68 : tout ±20 autour de 48
+    const v = extraDistractor(P68, existing, mulberry32(1));
+    expect(existing).not.toContain(v);
+    expect(v).toBeGreaterThanOrEqual(0);
+    expect(Math.abs(v - 48)).toBeGreaterThan(20);
+    expect(Math.abs(v - 48)).toBeLessThanOrEqual(30);
   });
 });
