@@ -1,10 +1,11 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, type Ticker } from 'pixi.js';
 import { DESIGN_HEIGHT, DESIGN_WIDTH } from '../config/dimensions';
 import { COLORS } from '../config/theme';
 
 export interface AppApi {
   readonly stage: Container;
   readonly canvas: HTMLCanvasElement;
+  readonly ticker: Ticker;
   readonly logical: { width: number; height: number };
   resize(): void;
   destroy(): void;
@@ -48,6 +49,7 @@ export async function createApp(parent: HTMLElement): Promise<AppApi> {
   return {
     stage: root,
     canvas: app.canvas,
+    ticker: app.ticker,
     logical: { width: DESIGN_WIDTH, height: DESIGN_HEIGHT },
     resize,
     destroy: () => {

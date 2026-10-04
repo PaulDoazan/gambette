@@ -12,7 +12,7 @@ const createOverlayElement = (): HTMLDivElement => {
   return overlay;
 };
 
-const installResizeWatcher = (overlay: HTMLDivElement): void => {
+const installResizeWatcher = (overlay: HTMLDivElement): (() => void) => {
   const update = (): void => {
     const portrait = window.innerHeight > window.innerWidth;
     overlay.style.display = portrait ? 'flex' : 'none';
@@ -20,10 +20,18 @@ const installResizeWatcher = (overlay: HTMLDivElement): void => {
   update();
   window.addEventListener('resize', update);
   window.addEventListener('orientationchange', update);
+  return () => {
+    window.removeEventListener('resize', update);
+    window.removeEventListener('orientationchange', update);
+  };
 };
 
-export function installOrientationLock(parent: HTMLElement): void {
+export function installOrientationLock(parent: HTMLElement): () => void {
   const overlay = createOverlayElement();
   parent.appendChild(overlay);
-  installResizeWatcher(overlay);
+  const detach = installResizeWatcher(overlay);
+  return () => {
+    detach();
+    overlay.remove();
+  };
 }
