@@ -33,10 +33,13 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
     const scene = createGameScene({
       physics,
       onWin: (winner) => {
+        // L'écran de victoire a son propre « Quitter » : celui du SDK le chevaucherait.
+        exit.setHidden(true);
         victory = createVictoryScene({
           winner,
           onReplay: () => {
             closeVictory();
+            exit.setHidden(false);
             scene.reset();
           },
           onQuit: () => ctx.onExit(),
