@@ -18,17 +18,17 @@ Gambette reprend l'architecture de la plateforme `~/Projets/lehibou-games` (mono
 
 ## 2. Décisions structurantes
 
-| Sujet               | Décision                                                                                              |
-| ------------------- | ----------------------------------------------------------------------------------------------------- |
-| Public              | Enfants ; réglages faits par un adulte                                                                |
-| Backend             | **Aucun**. Réglages en `localStorage`. Front statique seul                                            |
-| Portée des réglages | **Propre à chaque jeu** (sélections indépendantes entre jeux)                                         |
-| Écran de réglages   | **Dans le jeu** (bouton engrenage), le jeu ouvre le sélecteur du SDK                                  |
-| Shell conservé      | Menu des jeux + briefing (consigne, Jouer/Retour) + hôte plein écran + bouton quitter                 |
+| Sujet               | Décision                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| Public              | Enfants ; réglages faits par un adulte                                                               |
+| Backend             | **Aucun**. Réglages en `localStorage`. Front statique seul                                           |
+| Portée des réglages | **Propre à chaque jeu** (sélections indépendantes entre jeux)                                        |
+| Écran de réglages   | **Dans le jeu** (bouton engrenage), le jeu ouvre le sélecteur du SDK                                 |
+| Shell conservé      | Menu des jeux + briefing (consigne, Jouer/Retour) + hôte plein écran + bouton quitter                |
 | Organisation SDK    | **Deux packages** : `game-sdk` (contrat plateforme ↔ jeu) et `math-sdk` (domaine calculs), découplés |
-| Monorepo            | pnpm 10 + Turborepo, Node ≥ 22, TypeScript, ESLint, Prettier, Vitest (repris de lehibou-games)        |
+| Monorepo            | pnpm 10 + Turborepo, Node ≥ 22, TypeScript, ESLint, Prettier, Vitest (repris de lehibou-games)       |
 | Front               | Nuxt 4 + Vuetify, SPA générée (`nuxi generate`)                                                      |
-| CI                  | GitHub Actions : lint, typecheck, test, build. Pas de déploiement dans ce périmètre                   |
+| CI                  | GitHub Actions : lint, typecheck, test, build. Pas de déploiement dans ce périmètre                  |
 
 ### Hors périmètre (abandonné de lehibou-games)
 
@@ -93,13 +93,13 @@ export interface GameModule {
 }
 ```
 
-| Élément                  | Sort                                                                         |
-| ------------------------ | ---------------------------------------------------------------------------- |
-| `types.ts`               | Repris, modifié comme ci-dessus                                              |
-| `registry.ts`            | Repris ; `isAvailable(key, collaboratorCount)` supprimé (plus de seuil)     |
-| `standalone.ts`          | Repris ; contexte sans collaborateurs, gère un `mount` asynchrone           |
-| `exit-button.ts`         | Repris ; `data-test` `tower-exit*` → `game-exit*` ; option `{ fullscreen?: boolean }` (défaut `true`) |
-| `mock.ts`, `scoreboard.ts` | Supprimés                                                                  |
+| Élément                    | Sort                                                                                                  |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `types.ts`                 | Repris, modifié comme ci-dessus                                                                       |
+| `registry.ts`              | Repris ; `isAvailable(key, collaboratorCount)` supprimé (plus de seuil)                               |
+| `standalone.ts`            | Repris ; contexte sans collaborateurs, gère un `mount` asynchrone                                     |
+| `exit-button.ts`           | Repris ; `data-test` `tower-exit*` → `game-exit*` ; option `{ fullscreen?: boolean }` (défaut `true`) |
+| `mock.ts`, `scoreboard.ts` | Supprimés                                                                                             |
 
 Changements vs lehibou-games : suppression de `Collaborator`, `Gender`, `minCollaborators`, `record` ; `mount` peut être **asynchrone** (Pixi `Application.init()` et préchargement d'assets).
 
@@ -171,18 +171,18 @@ export const rabbitMath: GameModule = {
 
 ### Adaptations
 
-| Aujourd'hui (app autonome)                         | Dans Gambette                                                             |
-| -------------------------------------------------- | ------------------------------------------------------------------------- |
-| Rendu dans `#game-root`                            | Rendu dans `el`                                                           |
-| Resize basé sur `window.innerWidth/Height`         | Inchangé (l'hôte occupe tout le viewport) ; écouteur retiré à `unmount()` |
-| `Ticker.shared` global                             | Ticker propre à l'instance, arrêté à `unmount()`                          |
-| Orientation lock sur `document.body`               | Installé sur `el`, retiré à `unmount()`                                   |
-| Plein écran sur `document.documentElement`         | Inchangé — cohérent avec le shell (`useFullscreen` cible aussi la racine, l'état persiste d'un écran à l'autre) |
-| Musique démarrée (`startMusic`)                    | Non branchée : le dépôt rabbit-math ne contient aucun fichier son (`public/assets/sounds/` absent). `Audio.ts` est conservé pour plus tard |
-| Assets via `import.meta.env.BASE_URL`              | Assets via `new URL('./assets/…', import.meta.url)` (embarqués par Vite) |
-| `domain/tables`, `Rng`, `DifficultyConfig`, `QuestionGenerator`, `ui/CalcsPicker*` | Supprimés ; importés de `@gambette/math-sdk` |
-| `Settings.ts` persiste `selectedPairs` + réglages  | `selectedPairs` via `createCalcsStore('rabbit-math')` ; `rabbitsCount`, `tapMode` gardés sous `gambette.rabbit-math.settings` |
-| Pas de sortie                                      | Bouton quitter du SDK → `ctx.onExit()`, avec `{ fullscreen: false }` (le jeu a déjà son bouton plein écran) |
+| Aujourd'hui (app autonome)                                                         | Dans Gambette                                                                                                                              |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rendu dans `#game-root`                                                            | Rendu dans `el`                                                                                                                            |
+| Resize basé sur `window.innerWidth/Height`                                         | Inchangé (l'hôte occupe tout le viewport) ; écouteur retiré à `unmount()`                                                                  |
+| `Ticker.shared` global                                                             | Ticker propre à l'instance, arrêté à `unmount()`                                                                                           |
+| Orientation lock sur `document.body`                                               | Installé sur `el`, retiré à `unmount()`                                                                                                    |
+| Plein écran sur `document.documentElement`                                         | Inchangé — cohérent avec le shell (`useFullscreen` cible aussi la racine, l'état persiste d'un écran à l'autre)                            |
+| Musique démarrée (`startMusic`)                                                    | Non branchée : le dépôt rabbit-math ne contient aucun fichier son (`public/assets/sounds/` absent). `Audio.ts` est conservé pour plus tard |
+| Assets via `import.meta.env.BASE_URL`                                              | Assets via `new URL('./assets/…', import.meta.url)` (embarqués par Vite)                                                                   |
+| `domain/tables`, `Rng`, `DifficultyConfig`, `QuestionGenerator`, `ui/CalcsPicker*` | Supprimés ; importés de `@gambette/math-sdk`                                                                                               |
+| `Settings.ts` persiste `selectedPairs` + réglages                                  | `selectedPairs` via `createCalcsStore('rabbit-math')` ; `rabbitsCount`, `tapMode` gardés sous `gambette.rabbit-math.settings`              |
+| Pas de sortie                                                                      | Bouton quitter du SDK → `ctx.onExit()`, avec `{ fullscreen: false }` (le jeu a déjà son bouton plein écran)                                |
 
 Restent dans le jeu : `Session`, `sessionConfig`, `manche`, toutes les scènes, entités et systèmes. L'engrenage ouvre `SettingsScene` (Pixi), qui appelle `openCalcsPicker({ initial, container: el })`.
 

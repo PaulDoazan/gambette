@@ -11,6 +11,7 @@
 **Spec:** `docs/superpowers/specs/2026-10-04-gambette-platform-design.md`
 
 **Sources (lecture seule) :**
+
 - `LHG=/Users/pauldoazan/Projets/lehibou-games` — plateforme d'origine.
 - `RM=<scratchpad>/rabbit-math` — clone de `https://github.com/PaulDoazan/rabbit-math` (`git clone https://github.com/PaulDoazan/rabbit-math.git "$RM"` s'il n'existe pas ; commit de référence `9c4a996`).
 
@@ -72,12 +73,14 @@ gambette/
 ### Task 1: Socle monorepo + `game-sdk` épuré
 
 **Files:**
+
 - Create: `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`, `.gitignore`, `.npmrc`, `.nvmrc`, `.github/workflows/ci.yml`
 - Create: `packages/game-sdk/{package.json,tsconfig.json,vitest.config.ts}`
 - Create: `packages/game-sdk/src/{types,registry,standalone,exit-button,index}.ts`
 - Test: `packages/game-sdk/test/{types,registry,standalone,exit-button}.test.ts`
 
 **Interfaces:**
+
 - Produces (`@gambette/game-sdk`) :
   - `interface GameContext { onScore?(score: number): void; onGameOver?(result: { score: number }): void; onExit(): void; locale: 'fr' }`
   - `interface GameMeta { key: string; name: string; description: string; instructions: string; thumbnail?: string }`
@@ -460,6 +463,7 @@ export * from './exit-button';
 ```
 
 Dans `packages/game-sdk/src/exit-button.ts` :
+
 - signature : `export function createExitButton(parent: HTMLElement, onExit: () => void, opts: { fullscreen?: boolean } = {}): ExitButton {`
 - condition du bouton plein écran : `if ((opts.fullscreen ?? true) && isMobile() && fullscreenAvailable(target)) {`
 - dans le commentaire JSDoc, ajouter : « `opts.fullscreen: false` désactive ce bouton (jeu qui fournit le sien). »
@@ -487,11 +491,13 @@ Claude-Session: https://claude.ai/code/session_01PwD249iHE7SXS5EkecJV6c"
 ### Task 2: `math-sdk` — domaine (calculs, aléatoire, distracteurs, questions)
 
 **Files:**
+
 - Create: `packages/math-sdk/{package.json,tsconfig.json,vitest.config.ts}`
 - Create: `packages/math-sdk/src/domain/{calcs,rng,distractors,questions}.ts`, `packages/math-sdk/src/index.ts`
 - Test: `packages/math-sdk/test/{setup.ts,calcs.test.ts,rng.test.ts,distractors.test.ts,questions.test.ts}`
 
 **Interfaces:**
+
 - Produces (`@gambette/math-sdk`) :
   - `type Op = 'mul' | 'add' | 'sub'`, `interface Pair { readonly a: number; readonly b: number; readonly op: Op }`
   - `type TableListId`, `interface TableList`, `TABLE_LISTS`, `getTableList(id)`, `allMulPairs()`, `allAddPairs()`, `allSubPairs()`, `allPairs()`, `computeAnswer(p: Pair): number`, `opSymbol(op: Op): string`
@@ -677,11 +683,13 @@ Claude-Session: https://claude.ai/code/session_01PwD249iHE7SXS5EkecJV6c"
 ### Task 3: `math-sdk` — store des calculs par jeu
 
 **Files:**
+
 - Create: `packages/math-sdk/src/store.ts`
 - Modify: `packages/math-sdk/src/index.ts`
 - Test: `packages/math-sdk/test/store.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Pair`, `Op`, `randomMulPairs` (Task 2).
 - Produces: `interface CalcsStore { load(): Pair[]; save(pairs: readonly Pair[]): void }`, `createCalcsStore(gameKey: string, opts?: { defaults?: () => Pair[] }): CalcsStore`, `calcsStorageKey(gameKey: string): string`.
 
@@ -855,11 +863,13 @@ Claude-Session: https://claude.ai/code/session_01PwD249iHE7SXS5EkecJV6c"
 ### Task 4: `math-sdk` — sélecteur de calculs
 
 **Files:**
+
 - Create: `packages/math-sdk/src/picker/{index,dom,sections,exclusivity,style}.ts` (depuis `$RM/src/ui/CalcsPicker*.ts`)
 - Modify: `packages/math-sdk/src/index.ts`
 - Test: `packages/math-sdk/test/picker.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Op`, `Pair` (Task 2).
 - Produces: `interface CalcsPickerOptions { initial: readonly Pair[]; container?: HTMLElement }`, `openCalcsPicker(opts: CalcsPickerOptions): Promise<Pair[]>`. DOM : racine `.cp-overlay`, cases `input[type=checkbox][data-a][data-b][data-op]` (et `data-random="true"` pour « au hasard »), boutons `.cp-back` et `.cp-close`, avertissement `.cp-warn`.
 
@@ -983,6 +993,7 @@ Claude-Session: https://claude.ai/code/session_01PwD249iHE7SXS5EkecJV6c"
 ### Task 5: `game-rabbit-math` — import et branchement sur `math-sdk`
 
 **Files:**
+
 - Create: `packages/game-rabbit-math/**` (copie de `$RM/src`, `$RM/tests`, `$RM/index.html`, images)
 - Create: `packages/game-rabbit-math/{package.json,vite.config.ts,src/assets.ts}`
 - Modify: `src/services/Settings.ts`, `src/entities/{Background,GearButton,HalfCarrot,Slingshot,CarrotCounter,Tree,Carrot}.ts`, `src/scenes/GameScene.ts`, `src/main.ts`, imports de `src/**` et `tests/**`
@@ -990,6 +1001,7 @@ Claude-Session: https://claude.ai/code/session_01PwD249iHE7SXS5EkecJV6c"
 - Test: `tests/services/Settings.spec.ts` (réécrit)
 
 **Interfaces:**
+
 - Consumes: tout `@gambette/math-sdk` (Tasks 2–4).
 - Produces: `ASSET_URLS` et `preloadAssets(): Promise<unknown>` dans `src/assets.ts` ; `loadSettings()`, `saveSettings(s)`, `DEFAULT_SETTINGS`, `SETTINGS_KEY = 'gambette.rabbit-math.settings'`, `interface Settings { selectedPairs: Pair[]; rabbitsCount: RabbitsCount; tapMode: boolean }`.
 
@@ -1258,13 +1270,13 @@ export function preloadAssets(): Promise<unknown> {
 
 Remplacements dans `src/entities/` (ajouter `import { ASSET_URLS } from '../assets';` en tête de chaque fichier modifié) :
 
-| Fichier            | Avant                                                    | Après                         |
-| ------------------ | -------------------------------------------------------- | ----------------------------- |
-| `Background.ts`    | `` `${import.meta.env.BASE_URL}assets/sun.png` ``        | `ASSET_URLS.sun`              |
-| `GearButton.ts`    | `` `${import.meta.env.BASE_URL}assets/cog.png` ``        | `ASSET_URLS.cog`              |
-| `HalfCarrot.ts`, `CarrotCounter.ts`, `Carrot.ts` | `` `${import.meta.env.BASE_URL}assets/carot.png` `` | `ASSET_URLS.carrot` |
-| `Slingshot.ts`     | `` `${import.meta.env.BASE_URL}assets/weapon.png` ``     | `ASSET_URLS.weapon`           |
-| `Tree.ts` (4..8)   | `` `${import.meta.env.BASE_URL}assets/treeNbranches.png` `` | `ASSET_URLS.tree4` / `tree5` / `tree6` / `tree7` / `tree7` (8 → tree7, comme aujourd'hui) |
+| Fichier                                          | Avant                                                       | Après                                                                                     |
+| ------------------------------------------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `Background.ts`                                  | `` `${import.meta.env.BASE_URL}assets/sun.png` ``           | `ASSET_URLS.sun`                                                                          |
+| `GearButton.ts`                                  | `` `${import.meta.env.BASE_URL}assets/cog.png` ``           | `ASSET_URLS.cog`                                                                          |
+| `HalfCarrot.ts`, `CarrotCounter.ts`, `Carrot.ts` | `` `${import.meta.env.BASE_URL}assets/carot.png` ``         | `ASSET_URLS.carrot`                                                                       |
+| `Slingshot.ts`                                   | `` `${import.meta.env.BASE_URL}assets/weapon.png` ``        | `ASSET_URLS.weapon`                                                                       |
+| `Tree.ts` (4..8)                                 | `` `${import.meta.env.BASE_URL}assets/treeNbranches.png` `` | `ASSET_URLS.tree4` / `tree5` / `tree6` / `tree7` / `tree7` (8 → tree7, comme aujourd'hui) |
 
 Dans `src/main.ts`, remplacer le corps de `preloadAssets` local par l'import `import { preloadAssets } from './assets';` (supprimer la fonction locale et l'import `Assets`, et l'import `TREE_ASSET_URLS` s'il n'est plus utilisé).
 
@@ -1298,12 +1310,14 @@ Claude-Session: https://claude.ai/code/session_01PwD249iHE7SXS5EkecJV6c"
 ### Task 6: `game-rabbit-math` — `GameModule` montable / démontable
 
 **Files:**
+
 - Create: `packages/game-rabbit-math/src/{mount,index,standalone-entry}.ts`
 - Modify: `src/core/App.ts` (exposer `ticker`), `src/ui/OrientationLock.ts` (retourner un `dispose`), `index.html`
 - Delete: `src/main.ts`
 - Test: `packages/game-rabbit-math/tests/mount.spec.ts`, `tests/ui/OrientationLock.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `GameModule`, `GameContext`, `GameInstance`, `createExitButton(parent, onExit, { fullscreen: false })`, `runStandalone` (Task 1) ; `openCalcsPicker` (Task 4) ; `preloadAssets` (Task 5).
 - Produces: `export const rabbitMath: GameModule` (`meta.key === 'rabbit-math'`) depuis `@gambette/game-rabbit-math` ; `installOrientationLock(parent: HTMLElement): () => void`.
 
@@ -1638,11 +1652,13 @@ Claude-Session: https://claude.ai/code/session_01PwD249iHE7SXS5EkecJV6c"
 ### Task 7: `apps/web` — shell Nuxt (menu, briefing, hôte de jeu)
 
 **Files:**
+
 - Create (copiés de `$LHG/apps/web` puis adaptés) : `app.vue`, `tsconfig.json`, `vitest.config.ts`, `assets/css/theme.css`, `layouts/default.vue`, `components/Atom/{FullscreenToggle,ShapeArcs}.vue`, `components/Molecule/ScreenHeader.vue`, `composables/useFullscreen.ts`, `test/{setup,useFullscreen.test}.ts`
 - Create (écrits) : `package.json`, `nuxt.config.ts`, `games.ts`, `lib/{gameCosmetics,mountGame}.ts`, `composables/useGameSession.ts`, `features/{GameHost,BriefingPanel}.vue`, `components/Molecule/GameCard.vue`, `components/Organism/GameGrid.vue`, `pages/index.vue`, `pages/play/[key].vue`
 - Test: `apps/web/test/{mountGame,useGameSession,games}.test.ts`
 
 **Interfaces:**
+
 - Consumes: `createGameRegistry`, `GameModule`, `GameContext`, `GameInstance`, `GameMeta` (Task 1) ; `rabbitMath` (Task 6).
 - Produces: `startGame(module: GameModule, el: HTMLElement, ctx: GameContext, cb: { onReady(): void; onError(e: unknown): void }): { stop(): void }` dans `lib/mountGame.ts` ; `useGameSession(): { state: { phase: 'briefing' | 'playing' }; startPlaying(): void; backToBriefing(): void }`.
 
@@ -1767,7 +1783,10 @@ describe('startGame', () => {
   it('monte puis signale ready ; stop démonte', async () => {
     const d = deferredModule();
     const onReady = vi.fn();
-    const g = startGame(d.module, document.createElement('div'), ctx, { onReady, onError: vi.fn() });
+    const g = startGame(d.module, document.createElement('div'), ctx, {
+      onReady,
+      onError: vi.fn(),
+    });
     d.resolve();
     await flush();
     expect(onReady).toHaveBeenCalledTimes(1);
@@ -1778,7 +1797,10 @@ describe('startGame', () => {
   it('stop avant résolution : démonte dès que mount résout, sans ready', async () => {
     const d = deferredModule();
     const onReady = vi.fn();
-    const g = startGame(d.module, document.createElement('div'), ctx, { onReady, onError: vi.fn() });
+    const g = startGame(d.module, document.createElement('div'), ctx, {
+      onReady,
+      onError: vi.fn(),
+    });
     g.stop();
     d.resolve();
     await flush();
@@ -2072,10 +2094,10 @@ onBeforeUnmount(() => {
 import { computed } from 'vue';
 import type { GameMeta } from '@gambette/game-sdk';
 
-const props = withDefaults(
-  defineProps<{ meta: GameMeta; colorToken?: string; icon?: string }>(),
-  { colorToken: 'primary', icon: 'mdi-gamepad-variant' },
-);
+const props = withDefaults(defineProps<{ meta: GameMeta; colorToken?: string; icon?: string }>(), {
+  colorToken: 'primary',
+  icon: 'mdi-gamepad-variant',
+});
 const emit = defineEmits<{ play: [] }>();
 
 const accent = computed(() => `rgb(var(--v-theme-${props.colorToken}))`);
@@ -2130,6 +2152,7 @@ const emit = defineEmits<{ play: [key: string] }>();
 ```
 
 `apps/web/components/Molecule/GameCard.vue` : copier `$LHG/apps/web/components/Molecule/GameCard.vue`, puis :
+
 - props : `defineProps<{ meta: GameMeta; index?: number }>()` (retirer `available`, `canPlay`) ; import `GameMeta` depuis `@gambette/game-sdk` ;
 - supprimer `locked`, `needsPseudo`, la classe `game-card--locked`, le bloc `.game-card__lock`, les `VChip` « Verrouillé » / « Pseudo requis », les deux `<p class="game-card__hint">` et `:disabled` sur le bouton ;
 - supprimer les règles CSS `.game-card--locked …`, `.game-card__lock`, `.game-card__hint` et le sélecteur `:not(.game-card--locked)` du hover.
@@ -2233,6 +2256,7 @@ Expected: PASS ; `apps/web/.output/public/` contient le site statique. Si `nuxi 
 
 Run: `pnpm --filter @gambette/web dev` puis ouvrir `http://localhost:3000`.
 Expected :
+
 1. Accueil : titre Gambette, une carte « Rabbit Math ».
 2. Carte → `/play/rabbit-math` : consigne + Jouer + Retour.
 3. Jouer → spinner, puis le jeu en plein cadre avec ses images (onglet Network : PNG servis depuis `/_nuxt/…`, aucune 404).
