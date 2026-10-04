@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Bunny Academy</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #111;
+        overflow: hidden;
+        touch-action: none;
+        overscroll-behavior: none;
+      }
+      #game-root {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #loader {
+        position: fixed;
+        inset: 0;
+        background: #bfe6ff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 28px;
+        font-family: ui-rounded, system-ui, sans-serif;
+        z-index: 100;
+      }
+      .loader-stage {
+        position: relative;
+        width: 140px;
+        height: 110px;
+      }
+      .loader-bunny {
+        position: absolute;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 84px;
+        animation: bunny-hop 0.9s ease-in-out infinite;
+      }
+      .loader-body {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 64px;
+        height: 56px;
+        background: #fff4d6;
+        border: 3px solid #111;
+        border-radius: 50%;
+      }
+      .loader-ear {
+        position: absolute;
+        top: 0;
+        width: 12px;
+        height: 36px;
+        background: #fff4d6;
+        border: 3px solid #111;
+        border-radius: 50%;
+      }
+      .loader-ear-inner {
+        position: absolute;
+        top: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 22px;
+        background: #f4b7b0;
+        border-radius: 50%;
+      }
+      .loader-ear-left {
+        left: 16px;
+        transform: rotate(-10deg);
+      }
+      .loader-ear-right {
+        right: 16px;
+        transform: rotate(10deg);
+      }
+      .loader-eye {
+        position: absolute;
+        bottom: 26px;
+        width: 5px;
+        height: 5px;
+        background: #111;
+        border-radius: 50%;
+      }
+      .loader-eye-left {
+        left: 24px;
+      }
+      .loader-eye-right {
+        right: 24px;
+      }
+      .loader-shadow {
+        position: absolute;
+        bottom: 4px;
+        left: 50%;
+        width: 70px;
+        height: 10px;
+        background: rgba(17, 17, 17, 0.18);
+        border-radius: 50%;
+        transform: translateX(-50%);
+        animation: shadow-pulse 0.9s ease-in-out infinite;
+      }
+      .loader-carrot {
+        position: absolute;
+        top: 6px;
+        right: -8px;
+        width: 18px;
+        height: 28px;
+        background: #ff7a2b;
+        border: 2.5px solid #111;
+        border-radius: 50% 50% 40% 40% / 30% 30% 70% 70%;
+        transform-origin: center bottom;
+        animation: carrot-spin 1.6s linear infinite;
+      }
+      .loader-carrot::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 10px;
+        height: 10px;
+        background: #5cc05a;
+        border: 2px solid #111;
+        border-radius: 50% 50% 0 50%;
+      }
+      .loader-title {
+        font-size: 26px;
+        font-weight: 800;
+        color: #111;
+        letter-spacing: 0.5px;
+      }
+      .loader-text {
+        font-size: 16px;
+        font-weight: 700;
+        color: #111;
+        opacity: 0.7;
+      }
+      .loader-text::after {
+        content: '';
+        display: inline-block;
+        width: 1.2em;
+        text-align: left;
+        animation: dots 1.2s steps(4, end) infinite;
+      }
+      @keyframes bunny-hop {
+        0%,
+        100% {
+          transform: translateX(-50%) translateY(0) scaleY(1);
+        }
+        40% {
+          transform: translateX(-50%) translateY(-22px) scaleY(1.06);
+        }
+        80% {
+          transform: translateX(-50%) translateY(0) scaleY(0.92);
+        }
+      }
+      @keyframes shadow-pulse {
+        0%,
+        100% {
+          transform: translateX(-50%) scale(1);
+          opacity: 0.18;
+        }
+        40% {
+          transform: translateX(-50%) scale(0.6);
+          opacity: 0.08;
+        }
+      }
+      @keyframes carrot-spin {
+        from {
+          transform: rotate(-12deg);
+        }
+        to {
+          transform: rotate(348deg);
+        }
+      }
+      @keyframes dots {
+        0% {
+          content: '';
+        }
+        25% {
+          content: '.';
+        }
+        50% {
+          content: '..';
+        }
+        75% {
+          content: '...';
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loader">
+      <div class="loader-stage">
+        <div class="loader-bunny">
+          <div class="loader-ear loader-ear-left"><div class="loader-ear-inner"></div></div>
+          <div class="loader-ear loader-ear-right"><div class="loader-ear-inner"></div></div>
+          <div class="loader-body"></div>
+          <div class="loader-eye loader-eye-left"></div>
+          <div class="loader-eye loader-eye-right"></div>
+          <div class="loader-carrot"></div>
+        </div>
+        <div class="loader-shadow"></div>
+      </div>
+      <div class="loader-title">Bunny Academy</div>
+      <div class="loader-text">Chargement</div>
+    </div>
+    <div id="game-root"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
