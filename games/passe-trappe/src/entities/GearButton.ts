@@ -27,6 +27,8 @@ export function createGearButton(onTap: () => void): GearButton {
     .circle(0, 0, GEAR.r * 0.28)
     .fill(COLORS.calcText);
   view.addChild(hub);
+  // Le toucher sur l'engrenage ne doit pas atteindre la scène (saisie d'un palet).
+  view.on('pointerdown', (e) => e.stopPropagation());
   view.on('pointertap', onTap);
   return { view };
 }

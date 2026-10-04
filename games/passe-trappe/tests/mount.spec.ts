@@ -230,6 +230,26 @@ describe('réglages', () => {
     instance.unmount();
   });
 
+  it('un pointerdown sur l’engrenage ne remonte pas jusqu’à la scène', async () => {
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    const stage = fakeApps[0]!.stage;
+    const scene = fakeScenes[0] as FakeScene;
+    // Simule la remontée de Pixi : sans stopPropagation, le stage reçoit l'événement.
+    const e = {
+      pointerId: 1,
+      getLocalPosition: () => ({ x: 590, y: 640 }),
+      stopped: false,
+      stopPropagation() {
+        this.stopped = true;
+      },
+    };
+    stage.getChildByLabel('gear', true)!.emit('pointerdown', e as unknown as FederatedPointerEvent);
+    if (!e.stopped) stage.emit('pointerdown', e as unknown as FederatedPointerEvent);
+    expect(scene.drag.pointerDown).not.toHaveBeenCalled();
+    instance.unmount();
+  });
+
   it('fermer sans changement → même partie ; avec changement → nouvelle partie', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
