@@ -1,4 +1,6 @@
 export interface ExitButton {
+  /** Masque (ou réaffiche) le bouton ; masquer referme la confirmation ouverte. */
+  setHidden(hidden: boolean): void;
   dispose(): void;
 }
 
@@ -141,7 +143,12 @@ export function createExitButton(
 
   parent.appendChild(wrap);
 
+  const shownDisplay = wrap.style.display;
   return {
+    setHidden(hidden: boolean): void {
+      if (hidden) setConfirm(false);
+      wrap.style.display = hidden ? 'none' : shownDisplay;
+    },
     dispose(): void {
       detachFullscreen?.();
       wrap.remove();

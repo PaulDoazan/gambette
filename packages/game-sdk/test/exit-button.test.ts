@@ -124,3 +124,30 @@ describe('createExitButton — placement', () => {
     btn.dispose();
   });
 });
+
+describe('createExitButton — setHidden', () => {
+  it('masque puis réaffiche le bouton', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {});
+    const wrap = parent.firstElementChild as HTMLElement;
+    const initial = wrap.style.display;
+    btn.setHidden(true);
+    expect(wrap.style.display).toBe('none');
+    btn.setHidden(false);
+    expect(wrap.style.display).toBe(initial);
+    btn.dispose();
+  });
+
+  it('referme la confirmation ouverte en masquant', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {});
+    parent.querySelector<HTMLButtonElement>('[data-test="game-exit"]')!.click();
+    btn.setHidden(true);
+    btn.setHidden(false);
+    const panel = parent.querySelector<HTMLElement>('[data-test="game-exit-confirm-panel"]')!;
+    const exit = parent.querySelector<HTMLElement>('[data-test="game-exit"]')!;
+    expect(panel.style.display).toBe('none');
+    expect(exit.style.display).toBe('');
+    btn.dispose();
+  });
+});
