@@ -26,6 +26,17 @@ vi.mock('../src/core/App', () => ({
     return app;
   }),
 }));
+const { settingsFault } = vi.hoisted(() => ({ settingsFault: { error: null as Error | null } }));
+vi.mock('../src/services/Settings', async (orig) => {
+  const actual = await orig<typeof import('../src/services/Settings')>();
+  return {
+    ...actual,
+    loadSettings: () => {
+      if (settingsFault.error) throw settingsFault.error;
+      return actual.loadSettings();
+    },
+  };
+});
 vi.mock('../src/assets', async (orig) => ({
   ...(await orig<typeof import('../src/assets')>()),
   preloadAssets: vi.fn(async () => {}),
@@ -37,6 +48,7 @@ const ctx = (): GameContext => ({ locale: 'fr', onExit: vi.fn() });
 
 beforeEach(() => {
   fakeApps.length = 0;
+  settingsFault.error = null;
   document.body.innerHTML = '';
 });
 
@@ -89,5 +101,15 @@ describe('rabbitMath.mount / unmount', () => {
     void openCalcsPicker({ initial: [{ a: 2, b: 3, op: 'mul' }], container: el });
     instance.unmount();
     expect(document.querySelector('.cp-overlay')).toBeNull();
+  });
+
+  it('détruit l’app puis relance l’erreur si le montage échoue après createApp', async () => {
+    settingsFault.error = new Error('réglages illisibles');
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    await expect(rabbitMath.mount(el, ctx())).rejects.toThrow('réglages illisibles');
+    expect(fakeApps).toHaveLength(1);
+    expect(fakeApps[0]!.destroy).toHaveBeenCalled();
+    expect(el.children).toHaveLength(0);
   });
 });

@@ -57,33 +57,42 @@ const startGame = (rt: Runtime): void => {
 export async function mountRabbitMath(el: HTMLElement, ctx: GameContext): Promise<GameInstance> {
   await preloadAssets();
   const app = await createApp(el);
-  const physics = createPhysicsWorld();
-  const sm = createSceneManager(app.stage);
-  const settings = { current: loadSettings() };
-  saveSettings(settings.current);
-  const rt: Runtime = { el, sm, physics, settings };
-
-  const disposeOrientation = installOrientationLock(el);
-  const exit = createExitButton(el, () => ctx.onExit(), { fullscreen: false });
-  const onTick = (t: Ticker): void => {
-    physics.step(t.deltaMS);
-    sm.tick(t.deltaMS);
-    tickTweens(performance.now());
+  // Tout ce qui est installé après createApp : libéré dans l'ordre inverse, au unmount comme sur échec.
+  const cleanups: Array<() => void> = [() => app.destroy()];
+  const teardown = (): void => {
+    while (cleanups.length > 0) cleanups.pop()!();
+    // Sélecteur de calculs éventuellement ouvert (sa promesse ne résoudra jamais : sans effet).
+    el.querySelectorAll('.cp-overlay').forEach((n) => n.remove());
   };
-  app.ticker.add(onTick);
-  startGame(rt);
 
-  return {
-    unmount(): void {
+  try {
+    const physics = createPhysicsWorld();
+    cleanups.push(() => physics.destroy());
+    const sm = createSceneManager(app.stage);
+    cleanups.push(() => sm.destroy());
+    const settings = { current: loadSettings() };
+    saveSettings(settings.current);
+    const rt: Runtime = { el, sm, physics, settings };
+
+    const disposeOrientation = installOrientationLock(el);
+    cleanups.push(disposeOrientation);
+    const exit = createExitButton(el, () => ctx.onExit(), { fullscreen: false });
+    cleanups.push(() => exit.dispose());
+    const onTick = (t: Ticker): void => {
+      physics.step(t.deltaMS);
+      sm.tick(t.deltaMS);
+      tickTweens(performance.now());
+    };
+    app.ticker.add(onTick);
+    cleanups.push(() => {
       app.ticker.remove(onTick);
       tweenGroup.removeAll();
-      sm.destroy();
-      physics.destroy();
-      exit.dispose();
-      disposeOrientation();
-      app.destroy();
-      // Sélecteur de calculs éventuellement ouvert (sa promesse ne résoudra jamais : sans effet).
-      el.querySelectorAll('.cp-overlay').forEach((n) => n.remove());
-    },
-  };
+    });
+    startGame(rt);
+  } catch (e) {
+    teardown();
+    throw e;
+  }
+
+  return { unmount: teardown };
 }
