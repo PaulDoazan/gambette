@@ -1,35 +1,43 @@
 import { describe, it, expect } from 'vitest';
 import { createPhysicsWorld } from '../../src/core/PhysicsWorld';
-import Matter from 'matter-js';
 
-describe('PhysicsWorld create', () => {
-  it('creates an engine with downward gravity', () => {
+const OPTS = { density: 1, friction: 0.05, restitution: 0.2 };
+
+describe('PhysicsWorld', () => {
+  it('gravité vers le bas', () => {
     const w = createPhysicsWorld();
-    expect(w.engine.gravity.y).toBeGreaterThan(0);
+    expect(w.gravityY()).toBeGreaterThan(0);
     w.destroy();
   });
-});
 
-describe('PhysicsWorld add/remove', () => {
-  it('addBody / removeBody manage the world contents', () => {
+  it('createCircle / removeBody gèrent le contenu du monde', () => {
     const w = createPhysicsWorld();
-    const body = Matter.Bodies.circle(100, 100, 5);
-    w.addBody(body);
-    expect(w.engine.world.bodies).toContain(body);
-    w.removeBody(body);
-    expect(w.engine.world.bodies).not.toContain(body);
+    const b = w.createCircle({ x: 100, y: 100 }, 5, OPTS);
+    expect(w.bodyCount()).toBe(1);
+    expect(b.position()).toEqual({ x: 100, y: 100 });
+    w.removeBody(b);
+    expect(w.bodyCount()).toBe(0);
     w.destroy();
   });
-});
 
-describe('PhysicsWorld step', () => {
-  it('step advances the simulation for the requested ms', () => {
+  it('un corps créé est statique : il ne tombe pas', () => {
     const w = createPhysicsWorld();
-    const body = Matter.Bodies.circle(100, 100, 5);
-    w.addBody(body);
-    const startY = body.position.y;
+    const b = w.createCircle({ x: 100, y: 100 }, 5, OPTS);
     for (let i = 0; i < 30; i++) w.step(1000 / 60);
-    expect(body.position.y).toBeGreaterThan(startY);
+    expect(b.position().y).toBeCloseTo(100, 5);
+    w.destroy();
+  });
+
+  it('dynamique : step fait tomber le corps ; setVelocity en px/frame', () => {
+    const w = createPhysicsWorld();
+    const b = w.createCircle({ x: 100, y: 100 }, 5, OPTS);
+    b.setStatic(false);
+    b.setVelocity({ x: 6, y: 0 });
+    w.step(1000 / 60);
+    expect(b.position().x).toBeGreaterThan(105);
+    expect(b.position().x).toBeLessThan(107);
+    for (let i = 0; i < 30; i++) w.step(1000 / 60);
+    expect(b.position().y).toBeGreaterThan(100);
     w.destroy();
   });
 });

@@ -1,4 +1,3 @@
-import Matter from 'matter-js';
 import { Container, Rectangle } from 'pixi.js';
 import { CARROT_GROUND_Y, DESIGN_HEIGHT, DESIGN_WIDTH } from '../config/dimensions';
 import { createCarrot, type Carrot } from '../entities/Carrot';
@@ -13,7 +12,7 @@ import { processCarrotImpact, type ResolveCtx } from './gameRoundResolve';
 import { wireTapEvents } from './gameRoundTap';
 import { wireSlingshotEvents } from './gameRoundSlingshotInput';
 import type { Session } from '../domain/Session';
-import type { PhysicsWorld } from '../core/PhysicsWorld';
+import type { PhysicsWorld, PxBody } from '../core/PhysicsWorld';
 import type { Perch } from '../config/dimensions';
 import { CARROTS_PER_ROUND } from '../domain/sessionConfig';
 import { playEndOfSession } from './endOfSession';
@@ -53,7 +52,7 @@ interface Live {
   resolving: boolean;
   bouncing: boolean;
   destroyed: boolean;
-  owned: Set<Matter.Body>;
+  owned: Set<PxBody>;
   tapTargetIdx: number | null;
 }
 
@@ -65,13 +64,12 @@ const setupView = (v: Container): void => {
 };
 
 const setBodyAt = (c: Carrot, p: Vec): void => {
-  Matter.Body.setPosition(c.body, p);
+  c.body.setPosition(p);
   c.view.position.set(p.x, p.y);
 };
 
 const loadCarrot = (d: RoundFlowDeps, l: Live): Carrot => {
-  const c = createCarrot(d.slingshot.carrotPosition());
-  d.physics.addBody(c.body);
+  const c = createCarrot(d.slingshot.carrotPosition(), d.physics);
   l.owned.add(c.body);
   d.view.addChild(c.view);
   l.tapTargetIdx = null;
@@ -140,18 +138,15 @@ const continueOrEnd = (d: RoundFlowDeps, l: Live): void => {
 
 const bounceCarrotOff = (l: Live, _rabbitPos: Vec): void => {
   const b = l.carrot.body;
-  const v = b.velocity;
-  Matter.Body.setVelocity(b, {
-    x: -v.x * 0.5,
-    y: -Math.abs(v.y) * 0.4 - 3,
-  });
+  const v = b.velocity();
+  b.setVelocity({ x: -v.x * 0.5, y: -Math.abs(v.y) * 0.4 - 3 });
   l.bouncing = true;
 };
 
 const checkBounceLanding = (d: RoundFlowDeps, l: Live): void => {
   const b = l.carrot.body;
-  const p = { x: b.position.x, y: b.position.y };
-  const v = b.velocity;
+  const p = b.position();
+  const v = b.velocity();
   const grounded = p.y >= CARROT_GROUND_Y && v.y > 0;
   const offscreen = p.x < 0 || p.x > DESIGN_WIDTH;
   if (!grounded && !offscreen) return;
@@ -192,7 +187,7 @@ const aimContext = (d: RoundFlowDeps, l: Live) => ({
   rabbits: d.rabbits,
   slingshot: d.slingshot,
   preview: l.preview,
-  carrotBodyPos: () => ({ x: l.carrot.body.position.x, y: l.carrot.body.position.y }),
+  carrotBodyPos: () => l.carrot.body.position(),
   setCarrotPos: (p: Vec) => setBodyAt(l.carrot, p),
   delay: d.delay,
   isAiming: () => d.session.snapshot().phase === 'aiming',

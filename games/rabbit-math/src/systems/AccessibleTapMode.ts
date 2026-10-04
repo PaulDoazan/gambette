@@ -19,8 +19,7 @@ export function computeVelocityForTarget(
   };
 }
 
-// matter-js applies gravity each step as gravity.scale * gravity.y,
-// where gravity.scale = 0.001 (default) and gravity.y = GRAVITY_Y from physics.ts.
+// Gravité par pas de 1/60 s dans l'unité historique (0,7 × 0,001 px/ms²), cf. GRAVITY_M_S2.
 const STEP_GRAVITY = 0.001 * 0.7;
 const SEARCH_MIN_STEPS = 60;
 const SEARCH_MAX_STEPS = 140;

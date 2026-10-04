@@ -52,7 +52,7 @@ const onCorrect = async (ctx: ResolveCtx, idx: number): Promise<void> => {
   ctx.session.startResolving();
   ctx.session.recordHit();
   const carrot = ctx.carrot();
-  const impactVel = { x: carrot.body.velocity.x, y: carrot.body.velocity.y };
+  const impactVel = carrot.body.velocity();
   const mouth = { x: r.position.x, y: r.position.y + 4 };
   ctx.removeCarrot();
   r.markFallen();
@@ -86,10 +86,10 @@ const resolveRabbit = (ctx: ResolveCtx, idx: number): void => {
 
 export const processCarrotImpact = (ctx: ResolveCtx): void => {
   const b = ctx.carrot().body;
-  const p = { x: b.position.x, y: b.position.y };
+  const p = b.position();
   const idx = findHit(ctx.rabbits, p, ctx.tapTargetIdx());
   if (idx >= 0) return resolveRabbit(ctx, idx);
-  if (isLost(p, b.velocity)) {
+  if (isLost(p, b.velocity())) {
     ctx.setResolving(true);
     onMiss(ctx, p);
   }

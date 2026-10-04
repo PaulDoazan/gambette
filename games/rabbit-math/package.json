@@ -17,11 +17,10 @@
     "@gambette/game-sdk": "workspace:*",
     "@gambette/math-sdk": "workspace:*",
     "@tweenjs/tween.js": "^25.0.0",
-    "matter-js": "^0.20.0",
-    "pixi.js": "^8.18.1"
+    "pixi.js": "^8.18.1",
+    "planck": "^1.5.0"
   },
   "devDependencies": {
-    "@types/matter-js": "^0.20.2",
     "jsdom": "^29.0.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",

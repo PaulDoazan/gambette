@@ -1,4 +1,4 @@
-import type Matter from 'matter-js';
+import type { PxBody } from '../core/PhysicsWorld';
 import type { Carrot } from '../entities/Carrot';
 import type { PhysicsWorld } from '../core/PhysicsWorld';
 import { tweenObject } from '../entities/animations/Tween';
@@ -6,7 +6,7 @@ import { tweenObject } from '../entities/animations/Tween';
 export interface CleanupDeps {
   physics: PhysicsWorld;
   delay: (ms: number) => Promise<void>;
-  owned: Set<Matter.Body>;
+  owned: Set<PxBody>;
 }
 
 export async function fadeOutAndRemove(d: CleanupDeps, c: Carrot): Promise<void> {
@@ -17,7 +17,7 @@ export async function fadeOutAndRemove(d: CleanupDeps, c: Carrot): Promise<void>
   c.view.parent?.removeChild(c.view);
 }
 
-export function purgeOwnedBodies(physics: PhysicsWorld, owned: Set<Matter.Body>): void {
+export function purgeOwnedBodies(physics: PhysicsWorld, owned: Set<PxBody>): void {
   for (const b of owned) physics.removeBody(b);
   owned.clear();
 }

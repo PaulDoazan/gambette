@@ -1,5 +1,10 @@
 import type { Ticker } from 'pixi.js';
-import { createExitButton, installOrientationLock, type GameContext, type GameInstance } from '@gambette/game-sdk';
+import {
+  createExitButton,
+  installOrientationLock,
+  type GameContext,
+  type GameInstance,
+} from '@gambette/game-sdk';
 import { openCalcsPicker } from '@gambette/math-sdk';
 import { createApp } from './core/App';
 import { createPhysicsWorld, type PhysicsWorld } from './core/PhysicsWorld';
