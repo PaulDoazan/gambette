@@ -75,6 +75,9 @@ importers:
       '@gambette/game-sdk':
         specifier: workspace:*
         version: link:../../packages/game-sdk
+      '@gambette/math-sdk':
+        specifier: workspace:*
+        version: link:../../packages/math-sdk
       pixi.js:
         specifier: ^8.18.1
         version: 8.22.0
