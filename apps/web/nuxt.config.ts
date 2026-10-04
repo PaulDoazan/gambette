@@ -3,6 +3,12 @@ export default defineNuxtConfig({
   modules: ['@nuxt/fonts', 'vuetify-nuxt-module'],
   components: [{ path: '~/components' }, { path: '~/features' }],
   css: ['~/assets/css/theme.css'],
+  app: {
+    head: {
+      htmlAttrs: { lang: 'fr' },
+      title: 'Gambette',
+    },
+  },
   // Polices auto-hébergées au build (pas de requête CDN au runtime).
   fonts: {
     families: [
