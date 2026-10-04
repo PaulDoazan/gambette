@@ -3,7 +3,15 @@ import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWor
 import { createGameScene, initialPuckPositions } from '../../src/scenes/GameScene';
 import { campOf } from '../../src/domain/rules';
 import { elasticLine } from '../../src/domain/elastic';
+import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
+import { WRONG_LAUNCH_SPEED } from '../../src/config/physics';
 import { DIVIDER_THICKNESS, MID_Y, PUCK_RADIUS as R } from '../../src/config/dimensions';
+
+const PAIRS: Pair[] = [
+  { a: 6, b: 8, op: 'mul' },
+  { a: 7, b: 4, op: 'mul' },
+  { a: 9, b: 3, op: 'mul' },
+];
 
 let physics: PhysicsWorld;
 afterEach(() => physics.destroy());
@@ -11,7 +19,13 @@ afterEach(() => physics.destroy());
 describe('GameScene', () => {
   it('5 palets par camp au départ', () => {
     physics = createPhysicsWorld();
-    const scene = createGameScene({ physics, pucksPerPlayer: 5, onWin: vi.fn() });
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
     const camps = scene.pucks().map((p) => campOf(p.position().y));
     expect(camps.filter((c) => c === 'A')).toHaveLength(5);
     expect(camps.filter((c) => c === 'B')).toHaveLength(5);
@@ -22,7 +36,13 @@ describe('GameScene', () => {
   it('camp A vidé pendant 1 s → onWin("A") une seule fois', () => {
     physics = createPhysicsWorld();
     const onWin = vi.fn();
-    const scene = createGameScene({ physics, pucksPerPlayer: 5, onWin });
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin,
+    });
     scene
       .pucks()
       .forEach((p, i) =>
@@ -36,9 +56,16 @@ describe('GameScene', () => {
 
   it('palet lancé : ignore l’élastique jusqu’à l’avoir repassé, puis le respecte à nouveau', () => {
     physics = createPhysicsWorld();
-    const scene = createGameScene({ physics, pucksPerPlayer: 5, onWin: vi.fn() });
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
     const line = elasticLine('A');
-    const puck = scene.pucks().find((p) => campOf(p.position().y) === 'A')!;
+    // Seul le bon palet part à l'élastique.
+    const puck = scene.pucks().find((p) => campOf(p.position().y) === 'A' && scene.isCorrect(p))!;
     const start = puck.position();
     scene.drag.pointerDown(1, start);
     for (let y = start.y; y <= line.y + 80; y += 20) {
@@ -56,7 +83,13 @@ describe('GameScene', () => {
   it('reset remet les palets en place et réarme la victoire', () => {
     physics = createPhysicsWorld();
     const onWin = vi.fn();
-    const scene = createGameScene({ physics, pucksPerPlayer: 5, onWin });
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin,
+    });
     scene.pucks().forEach((p) => p.setPosition({ x: 360, y: 200 }));
     for (let i = 0; i < 70; i++) scene.tick(1000 / 60);
     scene.reset();
@@ -70,7 +103,13 @@ describe('GameScene', () => {
 
   it('reset remet aussi la rotation des palets à zéro', () => {
     physics = createPhysicsWorld();
-    const scene = createGameScene({ physics, pucksPerPlayer: 5, onWin: vi.fn() });
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
     scene.pucks().forEach((p) => p.body.setAngularVelocity(5));
     scene.reset();
     expect(scene.pucks().every((p) => p.body.getAngularVelocity() === 0)).toBe(true);
@@ -108,10 +147,105 @@ describe('initialPuckPositions', () => {
 describe('GameScene — nombre de palets', () => {
   it('10 palets par joueur', () => {
     physics = createPhysicsWorld();
-    const scene = createGameScene({ physics, pucksPerPlayer: 10, onWin: vi.fn() });
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 10,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
     const camps = scene.pucks().map((p) => campOf(p.position().y));
     expect(camps.filter((c) => c === 'A')).toHaveLength(10);
     expect(camps.filter((c) => c === 'B')).toHaveLength(10);
     scene.destroy();
+  });
+});
+
+const correctPerCamp = (scene: ReturnType<typeof createGameScene>) => {
+  const out = { A: 0, B: 0 };
+  for (const p of scene.pucks()) if (scene.isCorrect(p)) out[campOf(p.position().y)] += 1;
+  return out;
+};
+
+describe('GameScene — calcul', () => {
+  it('au départ : un calcul par camp et une seule bonne réponse par camp, valeurs distinctes', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
+    expect(correctPerCamp(scene)).toEqual({ A: 1, B: 1 });
+    for (const pl of ['A', 'B'] as const) {
+      const vals = scene
+        .pucks()
+        .filter((p) => campOf(p.position().y) === pl)
+        .map((p) => p.label());
+      expect(new Set(vals).size).toBe(vals.length);
+      expect(vals).toContain(computeAnswer(scene.calc(pl)));
+    }
+    scene.destroy();
+  });
+
+  it('un palet passe la ligne médiane → les deux calculs changent, une bonne réponse par camp', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(2),
+      onWin: vi.fn(),
+    });
+    const before = { A: scene.calc('A'), B: scene.calc('B') };
+    const mover = scene.pucks().find((p) => campOf(p.position().y) === 'A')!;
+    mover.setPosition({ x: 360, y: 520 }); // camp B, entre la rangée de B (y≈395) et la cloison
+    for (let i = 0; i < 25; i++) scene.tick(1000 / 60);
+    expect(scene.calc('A')).not.toEqual(before.A);
+    expect(scene.calc('B')).not.toEqual(before.B);
+    expect(correctPerCamp(scene)).toEqual({ A: 1, B: 1 });
+    expect(mover.label()).not.toBeNull();
+    scene.destroy();
+  });
+
+  it('le lancer suit l’étiquette au relâcher', () => {
+    const lineA = elasticLine('A');
+    // Étire le palet derrière l'élastique via scene.drag, relâche, laisse quelques frames passer.
+    const launch = (which: 'wrong' | 'right') => {
+      physics = createPhysicsWorld();
+      const scene = createGameScene({
+        physics,
+        pucksPerPlayer: 5,
+        pairs: PAIRS,
+        rng: mulberry32(3),
+        onWin: vi.fn(),
+      });
+      const inA = scene.pucks().filter((p) => campOf(p.position().y) === 'A');
+      const puck = inA.find((p) => scene.isCorrect(p) === (which === 'right'))!;
+      expect(puck).toBeDefined();
+      // Les autres palets du camp A sont écartés pour dégager le chemin d'étirement.
+      inA.filter((p) => p !== puck).forEach((p, i) => p.setPosition({ x: 100 + i * 130, y: 700 }));
+      puck.setPosition({ x: 360, y: 950 });
+      scene.tick(1000 / 60);
+      scene.drag.pointerDown(1, { x: 360, y: 950 });
+      for (let y = 950; y <= lineA.y + 80; y += 20) {
+        scene.drag.pointerMove(1, { x: 360, y });
+        for (let i = 0; i < 3; i++) scene.tick(1000 / 60);
+      }
+      scene.drag.pointerUp(1);
+      for (let i = 0; i < 3; i++) scene.tick(1000 / 60);
+      const v = puck.velocity();
+      const result = { speed: Math.hypot(v.x, v.y), vy: v.y, vibrating: puck.isVibrating() };
+      scene.destroy();
+      physics.destroy();
+      return result;
+    };
+    const wrong = launch('wrong');
+    expect(wrong.speed).toBeLessThanOrEqual(WRONG_LAUNCH_SPEED + 1);
+    expect(wrong.vibrating).toBe(true);
+    const right = launch('right');
+    expect(right.vy).toBeLessThan(-500);
+    expect(right.vibrating).toBe(false);
   });
 });

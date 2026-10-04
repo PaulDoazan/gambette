@@ -1,7 +1,9 @@
 import { Container } from 'pixi.js';
+import { computeAnswer, type Pair, type Rng } from '@gambette/math-sdk';
 import type { PhysicsWorld } from '../core/PhysicsWorld';
 import { createBoard } from '../entities/Board';
 import { createElastic, type Elastic } from '../entities/Elastic';
+import { createCalcBlock, type CalcBlock } from '../entities/CalcBlock';
 import { createPuck, type Puck } from '../entities/Puck';
 import { createDragController, type DragController } from '../input/DragController';
 import {
@@ -13,12 +15,16 @@ import {
 } from '../config/dimensions';
 import { elasticLine, stretchOf } from '../domain/elastic';
 import { campOf, createWinDetector } from '../domain/rules';
+import { createCrossingDetector } from '../domain/crossings';
+import { labelCamp, pickCalc } from '../domain/quiz';
 import { PLAYERS, type Player, type Vec } from '../domain/types';
 
 export interface GameScene {
   readonly view: Container;
   readonly drag: DragController;
   pucks(): readonly Puck[];
+  calc(player: Player): Pair;
+  isCorrect(puck: Puck): boolean;
   tick(deltaMs: number): void;
   reset(): void;
   destroy(): void;
@@ -57,6 +63,8 @@ const backInFront = (puck: Puck): boolean => {
 export function createGameScene(deps: {
   physics: PhysicsWorld;
   pucksPerPlayer: number;
+  pairs: readonly Pair[];
+  rng?: Rng;
   onWin(player: Player): void;
 }): GameScene {
   const { physics } = deps;
@@ -73,9 +81,35 @@ export function createGameScene(deps: {
     view.addChild(puck.view);
     return puck;
   });
-  const drag = createDragController({ physics, pucks: () => pucks });
+  const rng = deps.rng ?? Math.random;
+  const calcs = {} as Record<Player, Pair>;
+  const blocks: Record<Player, CalcBlock> = { A: createCalcBlock('A'), B: createCalcBlock('B') };
+  for (const p of PLAYERS) view.addChild(blocks[p].view);
+  const crossings = createCrossingDetector();
+  let clock = 0;
+  const campsNow = () => pucks.map((p) => campOf(p.position().y));
+  const isCorrect = (puck: Puck): boolean =>
+    puck.label() === computeAnswer(calcs[campOf(puck.position().y)]);
+  const drag = createDragController({
+    physics,
+    pucks: () => pucks,
+    canLaunch: (p) => isCorrect(p),
+  });
   const detector = createWinDetector();
   let won = false;
+
+  // Nouveaux calculs pour les deux camps, puis ré-étiquetage de tous les palets.
+  const relabel = (): void => {
+    for (const pl of PLAYERS) {
+      calcs[pl] = pickCalc(deps.pairs, (calcs[pl] as Pair | undefined) ?? null, rng);
+      blocks[pl].setPair(calcs[pl]);
+      const inCamp = pucks.filter((p) => campOf(p.position().y) === pl);
+      const labels = labelCamp(calcs[pl], inCamp.length, rng);
+      inCamp.forEach((p, i) => p.setLabel(labels ? labels.values[i]! : null));
+    }
+    crossings.reset(campsNow(), clock);
+  };
+  relabel();
 
   const placeInitial = (): void => {
     const positions = positionsAll();
@@ -92,7 +126,10 @@ export function createGameScene(deps: {
     view,
     drag,
     pucks: () => pucks,
+    calc: (pl) => calcs[pl],
+    isCorrect,
     tick: (deltaMs) => {
+      clock += deltaMs;
       physics.step(deltaMs);
       const counts: Record<Player, number> = { A: 0, B: 0 };
       for (const puck of pucks) {
@@ -106,6 +143,7 @@ export function createGameScene(deps: {
         const pos = held ? held.position() : null;
         elastics[pl].draw(pos && stretchOf(pos, elasticLine(pl), pl) > 0 ? pos : null);
       }
+      if (crossings.update(campsNow(), clock)) relabel();
       const winner = detector.update(counts, deltaMs);
       if (winner && !won) {
         won = true;
@@ -116,6 +154,7 @@ export function createGameScene(deps: {
     reset: () => {
       drag.reset();
       placeInitial();
+      relabel();
       detector.reset();
       won = false;
     },

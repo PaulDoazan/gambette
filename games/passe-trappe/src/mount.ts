@@ -6,12 +6,12 @@ import {
   type GameContext,
   type GameInstance,
 } from '@gambette/game-sdk';
+import { randomMulPairs } from '@gambette/math-sdk';
 import { createApp } from './core/App';
 import { createPhysicsWorld } from './core/PhysicsWorld';
-import { DEFAULT_PUCKS } from './config/dimensions';
 import { createGameScene } from './scenes/GameScene';
 import { createVictoryScene, type VictoryScene } from './scenes/VictoryScene';
-import { DESIGN_HEIGHT, DESIGN_WIDTH } from './config/dimensions';
+import { DEFAULT_PUCKS, DESIGN_HEIGHT, DESIGN_WIDTH } from './config/dimensions';
 
 export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promise<GameInstance> {
   const app = await createApp(el);
@@ -34,6 +34,7 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
     const scene = createGameScene({
       physics,
       pucksPerPlayer: DEFAULT_PUCKS,
+      pairs: randomMulPairs(),
       onWin: (winner) => {
         // L'écran de victoire a son propre « Quitter » : celui du SDK le chevaucherait.
         exit.setHidden(true);

@@ -6,7 +6,7 @@ import { createDragController } from '../../src/input/DragController';
 import { elasticLine } from '../../src/domain/elastic';
 import { campOf } from '../../src/domain/rules';
 import { MID_Y, PUCK_RADIUS } from '../../src/config/dimensions';
-import { DROP_MAX_SPEED, PUSHED_MAX_SPEED } from '../../src/config/physics';
+import { DROP_MAX_SPEED, PUSHED_MAX_SPEED, WRONG_LAUNCH_SPEED } from '../../src/config/physics';
 
 let physics: PhysicsWorld;
 const step = (n = 1): void => {
@@ -134,5 +134,36 @@ describe('DragController', () => {
     drag.reset();
     expect(drag.held('A')).toBeNull();
     expect(physics.world.getJointList()).toBeNull();
+  });
+});
+
+describe('DragController — mauvais palet', () => {
+  const stretchAndRelease = (canLaunch: boolean) => {
+    physics = createPhysicsWorld();
+    createBoard(physics);
+    const puck = createPuck(physics, { x: 360, y: 950 });
+    const drag = createDragController({ physics, pucks: () => [puck], canLaunch: () => canLaunch });
+    const lineA = elasticLine('A');
+    drag.pointerDown(1, { x: 360, y: 950 });
+    for (let y = 950; y <= lineA.y + 80; y += 20) {
+      drag.pointerMove(1, { x: 360, y });
+      step(3);
+    }
+    drag.pointerUp(1);
+    return puck;
+  };
+
+  it('élastique tendu puis relâché : mauvais palet ≤ WRONG_LAUNCH_SPEED et vibre', () => {
+    const puck = stretchAndRelease(false);
+    const v = puck.velocity();
+    expect(Math.hypot(v.x, v.y)).toBeLessThanOrEqual(WRONG_LAUNCH_SPEED + 1);
+    expect(v.y).toBeLessThan(0);
+    expect(puck.isVibrating()).toBe(true);
+  });
+
+  it('bon palet : lancer normal', () => {
+    const puck = stretchAndRelease(true);
+    expect(puck.velocity().y).toBeLessThan(-500);
+    expect(puck.isVibrating()).toBe(false);
   });
 });
