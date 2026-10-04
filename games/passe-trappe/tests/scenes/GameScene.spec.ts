@@ -248,4 +248,19 @@ describe('GameScene — calcul', () => {
     expect(right.vy).toBeLessThan(-500);
     expect(right.vibrating).toBe(false);
   });
+
+  it('destroy libère tous les corps planck (hors ancrage)', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
+    scene.destroy();
+    let n = 0;
+    for (let b = physics.world.getBodyList(); b; b = b.getNext()) n += 1;
+    expect(n).toBe(1); // ground
+  });
 });

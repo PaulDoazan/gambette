@@ -41,26 +41,42 @@ vi.mock('@gambette/game-sdk', async (importOriginal) => {
 // Scène de jeu simulée : permet de déclencher une victoire sans piloter la physique.
 interface FakeScene {
   view: Container;
-  drag: Record<'pointerDown' | 'pointerMove' | 'pointerUp', ReturnType<typeof vi.fn>>;
+  drag: Record<'pointerDown' | 'pointerMove' | 'pointerUp' | 'reset', ReturnType<typeof vi.fn>>;
   tick: ReturnType<typeof vi.fn>;
   reset: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
   win(player: Player): void;
+  pucksPerPlayer: number;
 }
-const { fakeScenes } = vi.hoisted(() => ({ fakeScenes: [] as unknown[] }));
+const { fakeScenes, order } = vi.hoisted(() => ({
+  fakeScenes: [] as unknown[],
+  order: [] as string[],
+}));
 vi.mock('../src/scenes/GameScene', () => ({
-  createGameScene: vi.fn((deps: { onWin(player: Player): void }) => {
-    const scene = {
-      view: new Container(),
-      drag: { pointerDown: vi.fn(), pointerMove: vi.fn(), pointerUp: vi.fn() },
-      tick: vi.fn(),
-      reset: vi.fn(),
-      destroy: vi.fn(),
-      win: (player: Player) => deps.onWin(player),
-    };
-    fakeScenes.push(scene);
-    return scene;
-  }),
+  createGameScene: vi.fn(
+    (deps: {
+      onWin(player: Player): void;
+      pucksPerPlayer: number;
+      physics: { destroy(): void };
+    }) => {
+      const realDestroy = deps.physics.destroy.bind(deps.physics);
+      deps.physics.destroy = () => {
+        order.push('physics');
+        realDestroy();
+      };
+      const scene = {
+        view: new Container(),
+        pucksPerPlayer: deps.pucksPerPlayer,
+        drag: { pointerDown: vi.fn(), pointerMove: vi.fn(), pointerUp: vi.fn(), reset: vi.fn() },
+        tick: vi.fn(),
+        reset: vi.fn(),
+        destroy: vi.fn(() => order.push('scene')),
+        win: (player: Player) => deps.onWin(player),
+      };
+      fakeScenes.push(scene);
+      return scene;
+    },
+  ),
 }));
 
 const { passeTrappe } = await import('../src/index');
@@ -69,7 +85,9 @@ const ctx = (): GameContext => ({ locale: 'fr', onExit: vi.fn() });
 beforeEach(() => {
   fakeApps.length = 0;
   fakeScenes.length = 0;
+  order.length = 0;
   lockState.fail = false;
+  localStorage.clear();
   document.body.innerHTML = '';
 });
 
@@ -179,6 +197,69 @@ describe('passeTrappe.mount — cycle de victoire', () => {
     expect(stage.getChildByLabel('replay', true)).not.toBeNull();
     expect(exitWrap(el).style.display).toBe('none');
     instance.unmount();
+    expect(el.children).toHaveLength(0);
+  });
+});
+
+describe('réglages', () => {
+  const tapIn = (c: Container, label: string): void => {
+    c.getChildByLabel(label, true)!.emit('pointertap', {} as FederatedPointerEvent);
+  };
+  const openSettings = (): Container => {
+    const app = fakeApps[0]!;
+    tapIn(app.stage, 'gear');
+    return app.stage.getChildByLabel('settings', true) as Container;
+  };
+
+  it('engrenage → panneau : pause (pas de tick, entrées ignorées), bouton quitter masqué', async () => {
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    const panel = openSettings();
+    expect(panel).not.toBeNull();
+    const scene = fakeScenes[0] as FakeScene;
+    expect(scene.drag.reset).toHaveBeenCalledTimes(1);
+    fakeApps[0]!.ticker.add.mock.calls[0]![0]({ deltaMS: 16 });
+    expect(scene.tick).not.toHaveBeenCalled();
+    fakeApps[0]!.stage.emit('pointerdown', {
+      pointerId: 1,
+      getLocalPosition: () => ({ x: 360, y: 900 }),
+    } as unknown as FederatedPointerEvent);
+    expect(scene.drag.pointerDown).not.toHaveBeenCalled();
+    const exit = el.querySelector('[data-test="game-exit"]')!.parentElement as HTMLElement;
+    expect(exit.style.display).toBe('none');
+    instance.unmount();
+  });
+
+  it('fermer sans changement → même partie ; avec changement → nouvelle partie', async () => {
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    let panel = openSettings();
+    tapIn(panel, 'close');
+    expect(fakeScenes).toHaveLength(1);
+    expect(fakeApps[0]!.stage.getChildByLabel('settings', true)).toBeNull();
+    const exit = el.querySelector('[data-test="game-exit"]')!.parentElement as HTMLElement;
+    expect(exit.style.display).not.toBe('none');
+    panel = openSettings();
+    tapIn(panel, 'plus');
+    tapIn(panel, 'close');
+    expect(fakeScenes).toHaveLength(2);
+    expect((fakeScenes[0] as FakeScene).destroy).toHaveBeenCalled();
+    expect((fakeScenes[1] as FakeScene).pucksPerPlayer).toBe(6);
+    // La nouvelle partie reçoit le tick et les entrées.
+    fakeApps[0]!.ticker.add.mock.calls[0]![0]({ deltaMS: 16 });
+    expect((fakeScenes[1] as FakeScene).tick).toHaveBeenCalledTimes(1);
+    expect((fakeScenes[0] as FakeScene).tick).not.toHaveBeenCalled();
+    instance.unmount();
+    expect((fakeScenes[1] as FakeScene).destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('démonter avec le panneau ouvert ne lève pas ; la scène est détruite avant la physique', async () => {
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    openSettings();
+    expect(() => instance.unmount()).not.toThrow();
+    expect((fakeScenes[0] as FakeScene).destroy).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['scene', 'physics']);
     expect(el.children).toHaveLength(0);
   });
 });

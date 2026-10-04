@@ -24,3 +24,6 @@ export const CALC_BLOCK = {
   A: { x: DESIGN_WIDTH - 24 - CALC_BLOCK_SIZE.w / 2, y: MID_Y + CALC_BLOCK_OFFSET },
   B: { x: 24 + CALC_BLOCK_SIZE.w / 2, y: MID_Y - CALC_BLOCK_OFFSET },
 } as const;
+
+/** Engrenage des réglages : sur le segment droit de la cloison. */
+export const GEAR = { x: DESIGN_WIDTH - 130, y: MID_Y, r: 30 } as const;

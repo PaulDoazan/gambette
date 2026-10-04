@@ -160,6 +160,8 @@ export function createGameScene(deps: {
     },
     destroy: () => {
       drag.destroy();
+      for (const puck of pucks) puck.destroy();
+      board.destroy();
       view.destroy({ children: true });
     },
   };
