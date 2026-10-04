@@ -69,6 +69,7 @@ export function createPhysicsWorld(): PhysicsWorld {
         type: 'static',
         position: Vec2(toM(at.x), toM(at.y)),
         linearDamping: CARROT_LINEAR_DAMPING,
+        angularDamping: CARROT_LINEAR_DAMPING,
       });
       body.createFixture({ shape: new Circle(toM(radius)), ...opts });
       const px = wrap(body);
