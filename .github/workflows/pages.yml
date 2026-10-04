@@ -26,8 +26,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Site servi sous /gambette/ (page de projet GitHub).
-      - run: pnpm --filter @gambette/web build
+      # Site servi sous /gambette/ (page de projet GitHub). Turbo construit d'abord les SDK
+      # (dist) ; --env-mode=loose laisse passer NUXT_APP_BASE_URL jusqu'à Nuxt.
+      - run: pnpm turbo run build --filter=@gambette/web --env-mode=loose
         env:
           NUXT_APP_BASE_URL: /gambette/
       - uses: actions/upload-pages-artifact@v4
