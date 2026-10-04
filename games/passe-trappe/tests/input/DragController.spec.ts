@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWorld';
 import { createBoard } from '../../src/entities/Board';
 import { createPuck, type Puck } from '../../src/entities/Puck';
@@ -104,6 +104,19 @@ describe('DragController', () => {
     }
     expect(maxSpeed).toBeLessThanOrEqual(PUSHED_MAX_SPEED + 1);
     expect(Math.abs(pucks[1]!.position().y - start.y)).toBeGreaterThan(5);
+  });
+
+  it('aucun palet tenu : le handler post-solve ne parcourt pas la liste des palets', () => {
+    physics = createPhysicsWorld();
+    createBoard(physics);
+    const pucks = [
+      createPuck(physics, { x: 300, y: 900 }),
+      createPuck(physics, { x: 380, y: 900 }), // chevauche : contact à chaque pas
+    ];
+    const list = vi.fn(() => pucks);
+    createDragController({ physics, pucks: list });
+    step(10);
+    expect(list).not.toHaveBeenCalled();
   });
 
   it('relâcher sans étirer → palet simplement lâché (pas de lancer)', () => {

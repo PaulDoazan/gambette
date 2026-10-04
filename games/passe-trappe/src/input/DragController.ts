@@ -1,4 +1,4 @@
-import { MouseJoint, Vec2, type Contact } from 'planck';
+import { MouseJoint, Vec2, type Body, type Contact } from 'planck';
 import type { PhysicsWorld } from '../core/PhysicsWorld';
 import type { Puck } from '../entities/Puck';
 import {
@@ -57,12 +57,21 @@ export function createDragController(deps: {
 
   // Palets poussés par un palet tenu pendant le sous-pas : leur vitesse est plafonnée juste après.
   const pushed = new Set<Puck>();
-  const puckOf = (body: unknown): Puck | undefined => deps.pucks().find((p) => p.body === body);
+  // Corps → palet, reconstruit à chaque saisie : le handler de contact ne parcourt jamais la liste.
+  const byBody = new Map<Body, Puck>();
+  const rebuildIndex = (): void => {
+    byBody.clear();
+    for (const puck of deps.pucks()) byBody.set(puck.body, puck);
+  };
+  const isHeld = (puck: Puck): boolean => {
+    for (const g of grabs.values()) if (g.puck === puck) return true;
+    return false;
+  };
   const onPostSolve = (contact: Contact): void => {
-    const a = puckOf(contact.getFixtureA().getBody());
-    const b = puckOf(contact.getFixtureB().getBody());
+    if (grabs.size === 0) return;
+    const a = byBody.get(contact.getFixtureA().getBody());
+    const b = byBody.get(contact.getFixtureB().getBody());
     if (!a || !b) return;
-    const isHeld = (p: Puck): boolean => [...grabs.values()].some((g) => g.puck === p);
     if (isHeld(a) && !isHeld(b)) pushed.add(b);
     else if (isHeld(b) && !isHeld(a)) pushed.add(a);
   };
@@ -121,6 +130,7 @@ export function createDragController(deps: {
         router.end(id);
         return;
       }
+      rebuildIndex();
       puck.setIgnoreElastic(true);
       const mass = puck.body.getMass();
       const joint = physics.world.createJoint(
