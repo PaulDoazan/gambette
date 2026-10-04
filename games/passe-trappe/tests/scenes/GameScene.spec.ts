@@ -25,7 +25,9 @@ describe('GameScene', () => {
     const scene = createGameScene({ physics, onWin });
     scene
       .pucks()
-      .forEach((p, i) => p.setPosition({ x: 80 + (i % 5) * 130, y: 200 + Math.floor(i / 5) * 90 }));
+      .forEach((p, i) =>
+        p.setPosition({ x: 70 + (i % 5) * 145, y: 230 + Math.floor(i / 5) * 125 }),
+      );
     for (let i = 0; i < 70; i++) scene.tick(1000 / 60);
     expect(onWin).toHaveBeenCalledTimes(1);
     expect(onWin).toHaveBeenCalledWith('A');

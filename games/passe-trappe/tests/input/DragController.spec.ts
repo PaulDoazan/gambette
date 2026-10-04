@@ -5,8 +5,8 @@ import { createPuck, type Puck } from '../../src/entities/Puck';
 import { createDragController } from '../../src/input/DragController';
 import { elasticLine } from '../../src/domain/elastic';
 import { campOf } from '../../src/domain/rules';
-import { MID_Y } from '../../src/config/dimensions';
-import { DROP_MAX_SPEED } from '../../src/config/physics';
+import { MID_Y, PUCK_RADIUS } from '../../src/config/dimensions';
+import { DROP_MAX_SPEED, PUSHED_MAX_SPEED } from '../../src/config/physics';
 
 let physics: PhysicsWorld;
 const step = (n = 1): void => {
@@ -29,7 +29,7 @@ describe('DragController', () => {
     const { pucks, drag } = setup([{ x: 360, y: 900 }]);
     drag.pointerDown(1, { x: 360, y: 900 });
     expect(drag.held('A')).toBe(pucks[0]);
-    for (let y = 900; y <= lineA.y + 80; y += 20) {
+    for (let y = 900; y <= lineA.y + 80 - PUCK_RADIUS; y += 20) {
       drag.pointerMove(1, { x: 360, y });
       step(3);
     }
@@ -74,16 +74,36 @@ describe('DragController', () => {
 
   it('pousser un palet à la main ne le fait pas passer la cloison', () => {
     const { pucks, drag } = setup([
-      { x: 360, y: 900 },
-      { x: 360, y: 760 },
+      { x: 360, y: 950 },
+      { x: 360, y: 820 },
     ]);
-    drag.pointerDown(1, { x: 360, y: 900 });
-    for (let y = 900; y >= 100; y -= 10) {
+    drag.pointerDown(1, { x: 360, y: 950 });
+    for (let y = 950; y >= 100; y -= 10) {
       drag.pointerMove(1, { x: 360, y });
       step(1);
     }
     step(60);
     expect(campOf(pucks[1]!.position().y)).toBe('A');
+  });
+
+  it('un palet poussé par un palet tenu ne dépasse pas PUSHED_MAX_SPEED', () => {
+    const { pucks, drag } = setup([
+      { x: 150, y: 950 },
+      { x: 150, y: 820 },
+    ]);
+    const start = pucks[1]!.position();
+    drag.pointerDown(1, { x: 150, y: 950 });
+    let maxSpeed = 0;
+    for (let y = 950; y >= 700; y -= 25) {
+      drag.pointerMove(1, { x: 150, y });
+      for (let k = 0; k < 2; k++) {
+        step();
+        const v = pucks[1]!.velocity();
+        maxSpeed = Math.max(maxSpeed, Math.hypot(v.x, v.y));
+      }
+    }
+    expect(maxSpeed).toBeLessThanOrEqual(PUSHED_MAX_SPEED + 1);
+    expect(Math.abs(pucks[1]!.position().y - start.y)).toBeGreaterThan(5);
   });
 
   it('relâcher sans étirer → palet simplement lâché (pas de lancer)', () => {

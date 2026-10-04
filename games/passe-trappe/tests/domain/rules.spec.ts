@@ -24,8 +24,12 @@ describe('clampToCamp', () => {
   });
 
   it('autorise l’étirement jusqu’à MAX_STRETCH, pas au-delà', () => {
-    expect(clampToCamp({ x: 360, y: 5000 }, 'A').y).toBe(elasticLine('A').y + MAX_STRETCH);
-    expect(clampToCamp({ x: 360, y: -5000 }, 'B').y).toBe(elasticLine('B').y - MAX_STRETCH);
+    expect(clampToCamp({ x: 360, y: 5000 }, 'A').y).toBe(
+      elasticLine('A').y + MAX_STRETCH - PUCK_RADIUS,
+    );
+    expect(clampToCamp({ x: 360, y: -5000 }, 'B').y).toBe(
+      elasticLine('B').y - MAX_STRETCH + PUCK_RADIUS,
+    );
   });
 });
 

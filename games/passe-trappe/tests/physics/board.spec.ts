@@ -47,8 +47,8 @@ describe('plateau planck', () => {
 
   it('deux palets → collision et transfert d’élan', () => {
     setup();
-    const a = createPuck(physics, { x: 200, y: 950 });
-    const b = createPuck(physics, { x: 200, y: 850 });
+    const a = createPuck(physics, { x: 200, y: 1010 });
+    const b = createPuck(physics, { x: 200, y: 880 });
     a.setVelocity({ x: 0, y: -800 });
     run(200);
     expect(b.velocity().y).toBeLessThan(0);

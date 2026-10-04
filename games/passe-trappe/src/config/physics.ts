@@ -20,5 +20,7 @@ export const PUCK_LINEAR_DAMPING = 1.2;
 export const DRAG_MAX_FORCE_PER_KG = 2000;
 /** Vitesse max (px/s) d'un palet lâché sans lancer élastique : un geste de la main ne doit pas égaler l'élastique. */
 export const DROP_MAX_SPEED = 300;
+/** Vitesse max (px/s) d'un palet poussé par un palet tenu : on peut le déplacer, pas l'envoyer à travers le trou. */
+export const PUSHED_MAX_SPEED = 120;
 
 export const CATEGORY = { PUCK: 0x1, WALL: 0x2, ELASTIC: 0x4 } as const;

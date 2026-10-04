@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { COLORS } from '../config/theme';
-import { elasticLine, stretchOf } from '../domain/elastic';
+import { contactPoint, elasticLine, stretchOf } from '../domain/elastic';
 import type { Player, Vec } from '../domain/types';
 
 export interface Elastic {
@@ -17,7 +17,10 @@ export function createElastic(player: Player): Elastic {
   const draw = (puck: Vec | null): void => {
     g.clear();
     g.moveTo(line.left.x, line.y);
-    if (puck && stretchOf(puck, line, player) > 0) g.lineTo(puck.x, puck.y);
+    if (puck && stretchOf(puck, line, player) > 0) {
+      const c = contactPoint(puck, player);
+      g.lineTo(c.x, c.y);
+    }
     g.lineTo(line.right.x, line.y).stroke({ width: 5, color: COLORS.elastic, cap: 'round' });
   };
   draw(null);

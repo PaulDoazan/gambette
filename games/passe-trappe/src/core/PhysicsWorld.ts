@@ -8,6 +8,8 @@ export interface PhysicsWorld {
   toM(px: number): number;
   toPx(m: number): number;
   step(deltaMs: number): void;
+  /** Callback exécuté après chaque sous-pas fixe ; renvoie la fonction de désinscription. */
+  onAfterStep(cb: () => void): () => void;
   destroy(): void;
 }
 
@@ -30,6 +32,7 @@ export function createPhysicsWorld(): PhysicsWorld {
     if (isWallContact(contact)) contact.setRestitution(WALL_RESTITUTION);
   });
   let pendingS = 0;
+  const afterStep = new Set<() => void>();
   return {
     world,
     ground,
@@ -39,10 +42,18 @@ export function createPhysicsWorld(): PhysicsWorld {
       pendingS = Math.min(pendingS + deltaMs / 1000, STEP_S * MAX_SUBSTEPS);
       while (pendingS >= STEP_S - 1e-9) {
         world.step(STEP_S);
+        afterStep.forEach((cb) => cb());
         pendingS -= STEP_S;
       }
     },
+    onAfterStep: (cb) => {
+      afterStep.add(cb);
+      return () => {
+        afterStep.delete(cb);
+      };
+    },
     destroy: () => {
+      afterStep.clear();
       for (let b = world.getBodyList(); b;) {
         const next = b.getNext();
         world.destroyBody(b);

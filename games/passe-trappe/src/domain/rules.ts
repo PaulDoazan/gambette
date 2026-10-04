@@ -10,7 +10,7 @@ const clamp = (v: number, min: number, max: number): number => Math.min(max, Mat
 
 /**
  * Position autorisée pour un palet tenu par `player` : la moitié arrière de son camp, entre le
- * milieu (cloison / élastique) et l'élastique étiré au plus de MAX_STRETCH. Le palet tenu ne
+ * milieu (cloison / élastique) et l'élastique : le bord du palet l'étire d'au plus MAX_STRETCH. Le palet tenu ne
  * peut ainsi pas pousser les autres à travers le trou.
  */
 export function clampToCamp(p: Vec, player: Player): Vec {
@@ -19,8 +19,8 @@ export function clampToCamp(p: Vec, player: Player): Vec {
   const rear = (MID_Y + line.y) / 2;
   const y =
     player === 'A'
-      ? clamp(p.y, rear, line.y + MAX_STRETCH)
-      : clamp(p.y, line.y - MAX_STRETCH, rear);
+      ? clamp(p.y, rear, line.y + MAX_STRETCH - PUCK_RADIUS)
+      : clamp(p.y, line.y - MAX_STRETCH + PUCK_RADIUS, rear);
   return { x, y };
 }
 
