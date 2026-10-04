@@ -7,6 +7,7 @@ import { createCalcBlock, type CalcBlock } from '../entities/CalcBlock';
 import { createPuck, type Puck } from '../entities/Puck';
 import { createDragController, type DragController } from '../input/DragController';
 import {
+  CALC_BLOCK_SIZE,
   DESIGN_WIDTH,
   DIVIDER_THICKNESS,
   MID_Y,
@@ -34,6 +35,7 @@ export interface GameScene {
  * Disposition de départ. Jusqu'à 5 palets : une rangée à mi-chemin entre la cloison et
  * l'élastique. Au-delà : deux rangées (ceil(n/2) côté cloison, floor(n/2) côté élastique),
  * la seconde décalée d'un demi-pas si les deux rangées ont le même nombre de palets.
+ * La rangée avant est posée juste derrière le bloc de calcul du camp : aucun palet ne le recouvre.
  */
 export function initialPuckPositions(player: Player, count: number): Vec[] {
   const lineY = elasticLine(player).y;
@@ -43,7 +45,8 @@ export function initialPuckPositions(player: Player, count: number): Vec[] {
     return Array.from({ length: n }, (_, i) => ({ x: step * (i + 1) + shift, y }));
   };
   if (count <= 5) return row(count, (MID_Y + lineY) / 2);
-  const front = MID_Y + toward * (DIVIDER_THICKNESS / 2 + PUCK_RADIUS + 2 * PUCK_SPACING);
+  const front =
+    MID_Y + toward * (DIVIDER_THICKNESS / 2 + 24 + CALC_BLOCK_SIZE.h + PUCK_RADIUS + PUCK_SPACING);
   const back = front + toward * (2 * PUCK_RADIUS + PUCK_SPACING);
   const n1 = Math.ceil(count / 2);
   const n2 = count - n1;
@@ -76,6 +79,10 @@ export function createGameScene(deps: {
   const elastics: Record<Player, Elastic> = { A: createElastic('A'), B: createElastic('B') };
   for (const p of PLAYERS) view.addChild(elastics[p].view);
 
+  // Blocs de calcul sous les palets : une étiquette n'est jamais recouverte.
+  const blocks: Record<Player, CalcBlock> = { A: createCalcBlock('A'), B: createCalcBlock('B') };
+  for (const p of PLAYERS) view.addChild(blocks[p].view);
+
   const pucks: Puck[] = positionsAll().map((pos) => {
     const puck = createPuck(physics, pos);
     view.addChild(puck.view);
@@ -83,8 +90,6 @@ export function createGameScene(deps: {
   });
   const rng = deps.rng ?? Math.random;
   const calcs = {} as Record<Player, Pair>;
-  const blocks: Record<Player, CalcBlock> = { A: createCalcBlock('A'), B: createCalcBlock('B') };
-  for (const p of PLAYERS) view.addChild(blocks[p].view);
   const crossings = createCrossingDetector();
   let clock = 0;
   const campsNow = () => pucks.map((p) => campOf(p.position().y));

@@ -5,7 +5,13 @@ import { campOf } from '../../src/domain/rules';
 import { elasticLine } from '../../src/domain/elastic';
 import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
 import { WRONG_LAUNCH_SPEED } from '../../src/config/physics';
-import { DIVIDER_THICKNESS, MID_Y, PUCK_RADIUS as R } from '../../src/config/dimensions';
+import {
+  CALC_BLOCK,
+  CALC_BLOCK_SIZE,
+  DIVIDER_THICKNESS,
+  MID_Y,
+  PUCK_RADIUS as R,
+} from '../../src/config/dimensions';
 
 const PAIRS: Pair[] = [
   { a: 6, b: 8, op: 'mul' },
@@ -144,6 +150,21 @@ describe('initialPuckPositions', () => {
   }
 });
 
+describe('initialPuckPositions — bloc de calcul', () => {
+  for (let count = 5; count <= 10; count++) {
+    it(`${count} palets : aucun palet ne touche le bloc de calcul de son camp`, () => {
+      for (const pl of ['A', 'B'] as const) {
+        const c = CALC_BLOCK[pl];
+        for (const p of initialPuckPositions(pl, count)) {
+          const dx = Math.max(Math.abs(p.x - c.x) - CALC_BLOCK_SIZE.w / 2, 0);
+          const dy = Math.max(Math.abs(p.y - c.y) - CALC_BLOCK_SIZE.h / 2, 0);
+          expect(Math.hypot(dx, dy)).toBeGreaterThan(R);
+        }
+      }
+    });
+  }
+});
+
 describe('GameScene — nombre de palets', () => {
   it('10 palets par joueur', () => {
     physics = createPhysicsWorld();
@@ -168,6 +189,27 @@ const correctPerCamp = (scene: ReturnType<typeof createGameScene>) => {
 };
 
 describe('GameScene — calcul', () => {
+  it('les blocs de calcul sont affichés sous les palets', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
+    const order = scene.view.children;
+    const lastBlock = Math.max(
+      ...(['A', 'B'] as const).map((p) =>
+        order.findIndex((c) => c.x === CALC_BLOCK[p].x && c.y === CALC_BLOCK[p].y),
+      ),
+    );
+    const firstPuck = Math.min(...scene.pucks().map((p) => order.indexOf(p.view)));
+    expect(lastBlock).toBeGreaterThanOrEqual(0);
+    expect(lastBlock).toBeLessThan(firstPuck);
+    scene.destroy();
+  });
+
   it('au départ : un calcul par camp et une seule bonne réponse par camp, valeurs distinctes', () => {
     physics = createPhysicsWorld();
     const scene = createGameScene({
