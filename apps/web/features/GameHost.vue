@@ -32,6 +32,9 @@ onBeforeUnmount(() => {
     <div ref="host" class="game-host__stage" />
     <div v-if="status === 'loading'" class="game-host__overlay">
       <VProgressCircular indeterminate color="white" size="48" width="4" />
+      <VBtn variant="text" color="white" prepend-icon="mdi-arrow-left" @click="emit('back')">
+        Retour
+      </VBtn>
     </div>
     <div v-else-if="status === 'error'" class="game-host__overlay">
       <p class="game-host__error">Le jeu n'a pas pu se charger.</p>
@@ -48,6 +51,8 @@ onBeforeUnmount(() => {
   inset: 0;
   background: #111;
   z-index: 2000;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 .game-host__stage {
   position: absolute;
