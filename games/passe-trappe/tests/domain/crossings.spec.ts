@@ -3,42 +3,53 @@ import { createCrossingDetector, RENEW_COOLDOWN_MS } from '../../src/domain/cros
 import type { Player } from '../../src/domain/types';
 
 const start: Player[] = ['A', 'A', 'B', 'B'];
+const moved: Player[] = ['B', 'A', 'B', 'B'];
 
 describe('createCrossingDetector', () => {
   it('pas de changement de camp → pas de renouvellement', () => {
     const d = createCrossingDetector();
     d.reset(start, 0);
     expect(d.update(start, 1000)).toBe(false);
+    expect(d.update(start, 5000)).toBe(false);
   });
 
-  it('un palet change de camp → renouvellement', () => {
+  it('passage net → un seul renouvellement, une fois les camps stables depuis la fenêtre', () => {
     const d = createCrossingDetector();
     d.reset(start, 0);
-    expect(d.update(['B', 'A', 'B', 'B'], 1000)).toBe(true);
-    expect(d.update(['B', 'A', 'B', 'B'], 1016)).toBe(false);
+    expect(d.update(moved, 1000)).toBe(false);
+    expect(d.update(moved, 1000 + RENEW_COOLDOWN_MS - 1)).toBe(false);
+    expect(d.update(moved, 1000 + RENEW_COOLDOWN_MS)).toBe(true);
+    expect(d.update(moved, 1000 + RENEW_COOLDOWN_MS + 16)).toBe(false);
+    expect(d.update(moved, 5000)).toBe(false);
   });
 
-  it('oscillation dans la fenêtre qui revient au camp renouvelé → un seul renouvellement', () => {
+  it('aller-retour rapide revenu aux camps étiquetés → aucun renouvellement', () => {
     const d = createCrossingDetector();
     d.reset(start, 0);
-    expect(d.update(['B', 'A', 'B', 'B'], 1000)).toBe(true);
-    expect(d.update(['A', 'A', 'B', 'B'], 1100)).toBe(false);
-    expect(d.update(['B', 'A', 'B', 'B'], 1200)).toBe(false);
-    expect(d.update(['B', 'A', 'B', 'B'], 1000 + RENEW_COOLDOWN_MS + 50)).toBe(false);
+    expect(d.update(moved, 1000)).toBe(false);
+    expect(d.update(start, 1100)).toBe(false);
+    expect(d.update(start, 1100 + RENEW_COOLDOWN_MS)).toBe(false);
+    expect(d.update(start, 5000)).toBe(false);
   });
 
-  it('retour dans la fenêtre puis immobile → renouvellement différé à la fin de la fenêtre', () => {
+  it('oscillation qui finit dans l’autre camp → un seul renouvellement, après stabilisation', () => {
     const d = createCrossingDetector();
     d.reset(start, 0);
-    d.update(['B', 'A', 'B', 'B'], 1000);
-    expect(d.update(['A', 'A', 'B', 'B'], 1100)).toBe(false);
-    expect(d.update(['A', 'A', 'B', 'B'], 1000 + RENEW_COOLDOWN_MS)).toBe(true);
+    expect(d.update(moved, 1000)).toBe(false);
+    expect(d.update(start, 1100)).toBe(false);
+    expect(d.update(moved, 1200)).toBe(false);
+    expect(d.update(moved, 1200 + RENEW_COOLDOWN_MS - 1)).toBe(false);
+    expect(d.update(moved, 1200 + RENEW_COOLDOWN_MS)).toBe(true);
+    expect(d.update(moved, 5000)).toBe(false);
   });
 
   it('deux passages espacés → deux renouvellements', () => {
     const d = createCrossingDetector();
     d.reset(start, 0);
-    expect(d.update(['B', 'A', 'B', 'B'], 1000)).toBe(true);
-    expect(d.update(['B', 'B', 'B', 'B'], 2000)).toBe(true);
+    d.update(moved, 1000);
+    expect(d.update(moved, 1000 + RENEW_COOLDOWN_MS)).toBe(true);
+    const both: Player[] = ['B', 'B', 'B', 'B'];
+    d.update(both, 2000);
+    expect(d.update(both, 2000 + RENEW_COOLDOWN_MS)).toBe(true);
   });
 });

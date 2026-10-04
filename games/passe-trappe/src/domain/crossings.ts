@@ -8,8 +8,9 @@ export interface CrossingDetector {
   reset(camps: readonly Player[], nowMs: number): void;
   /**
    * true quand il faut renouveler calculs et étiquettes : les camps diffèrent de ceux du
-   * dernier étiquetage et la fenêtre est écoulée. Une oscillation qui revient au camp
-   * étiqueté avant la fin de la fenêtre ne déclenche rien.
+   * dernier étiquetage et sont restés identiques entre eux depuis au moins la fenêtre
+   * (anti-rebond : on renouvelle sur le front stable, jamais en plein va-et-vient). Un aller-retour
+   * qui revient aux camps étiquetés ne déclenche rien ; un passage net renouvelle une seule fois.
    */
   update(camps: readonly Player[], nowMs: number): boolean;
 }
@@ -19,17 +20,22 @@ const sameCamps = (a: readonly Player[], b: readonly Player[]): boolean =>
 
 export function createCrossingDetector(cooldownMs = RENEW_COOLDOWN_MS): CrossingDetector {
   let labelled: Player[] = [];
-  let lastRenew = -Infinity;
+  let current: Player[] = [];
+  let since = 0; // dernier instant où les camps ont changé
   return {
     reset: (camps, nowMs) => {
       labelled = [...camps];
-      lastRenew = nowMs;
+      current = [...camps];
+      since = nowMs;
     },
     update: (camps, nowMs) => {
-      if (sameCamps(camps, labelled)) return false;
-      if (nowMs - lastRenew < cooldownMs) return false;
-      labelled = [...camps];
-      lastRenew = nowMs;
+      if (!sameCamps(camps, current)) {
+        current = [...camps];
+        since = nowMs;
+      }
+      if (sameCamps(current, labelled)) return false;
+      if (nowMs - since < cooldownMs) return false;
+      labelled = [...current];
       return true;
     },
   };
