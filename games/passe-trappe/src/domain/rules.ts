@@ -1,10 +1,4 @@
-import {
-  DESIGN_WIDTH,
-  DIVIDER_THICKNESS,
-  MAX_STRETCH,
-  MID_Y,
-  PUCK_RADIUS,
-} from '../config/dimensions';
+import { DESIGN_WIDTH, MAX_STRETCH, MID_Y, PUCK_RADIUS } from '../config/dimensions';
 import { elasticLine } from './elastic';
 import { PLAYERS, type Player, type Vec } from './types';
 
@@ -14,15 +8,19 @@ export function campOf(y: number): Player {
 
 const clamp = (v: number, min: number, max: number): number => Math.min(max, Math.max(min, v));
 
-/** Position autorisée pour un palet tenu par `player` : son camp, élastique étiré au plus de MAX_STRETCH. */
+/**
+ * Position autorisée pour un palet tenu par `player` : la moitié arrière de son camp, entre le
+ * milieu (cloison / élastique) et l'élastique étiré au plus de MAX_STRETCH. Le palet tenu ne
+ * peut ainsi pas pousser les autres à travers le trou.
+ */
 export function clampToCamp(p: Vec, player: Player): Vec {
   const x = clamp(p.x, PUCK_RADIUS, DESIGN_WIDTH - PUCK_RADIUS);
-  const nearDivider = DIVIDER_THICKNESS / 2 + PUCK_RADIUS;
   const line = elasticLine(player);
+  const rear = (MID_Y + line.y) / 2;
   const y =
     player === 'A'
-      ? clamp(p.y, MID_Y + nearDivider, line.y + MAX_STRETCH)
-      : clamp(p.y, line.y - MAX_STRETCH, MID_Y - nearDivider);
+      ? clamp(p.y, rear, line.y + MAX_STRETCH)
+      : clamp(p.y, line.y - MAX_STRETCH, rear);
   return { x, y };
 }
 

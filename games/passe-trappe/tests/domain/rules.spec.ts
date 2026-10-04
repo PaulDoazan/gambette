@@ -1,13 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { campOf, clampToCamp, createWinDetector } from '../../src/domain/rules';
 import { elasticLine } from '../../src/domain/elastic';
-import {
-  DESIGN_WIDTH,
-  DIVIDER_THICKNESS,
-  MAX_STRETCH,
-  MID_Y,
-  PUCK_RADIUS,
-} from '../../src/config/dimensions';
+import { DESIGN_WIDTH, MAX_STRETCH, MID_Y, PUCK_RADIUS } from '../../src/config/dimensions';
 
 describe('campOf', () => {
   it('sous la ligne médiane → A, au-dessus → B', () => {
@@ -22,10 +16,10 @@ describe('clampToCamp', () => {
     expect(clampToCamp({ x: 900, y: 900 }, 'A').x).toBe(DESIGN_WIDTH - PUCK_RADIUS);
   });
 
-  it('empêche de passer la cloison avec le doigt', () => {
-    const minA = MID_Y + DIVIDER_THICKNESS / 2 + PUCK_RADIUS;
+  it('confine le palet tenu à la moitié arrière de son camp', () => {
+    const minA = (MID_Y + elasticLine('A').y) / 2;
     expect(clampToCamp({ x: 360, y: 100 }, 'A').y).toBe(minA);
-    const maxB = MID_Y - DIVIDER_THICKNESS / 2 - PUCK_RADIUS;
+    const maxB = (MID_Y + elasticLine('B').y) / 2;
     expect(clampToCamp({ x: 360, y: 1200 }, 'B').y).toBe(maxB);
   });
 
