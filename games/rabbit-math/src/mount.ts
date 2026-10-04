@@ -1,5 +1,5 @@
 import type { Ticker } from 'pixi.js';
-import { createExitButton, type GameContext, type GameInstance } from '@gambette/game-sdk';
+import { createExitButton, installOrientationLock, type GameContext, type GameInstance } from '@gambette/game-sdk';
 import { openCalcsPicker } from '@gambette/math-sdk';
 import { createApp } from './core/App';
 import { createPhysicsWorld, type PhysicsWorld } from './core/PhysicsWorld';
@@ -7,7 +7,6 @@ import { createSceneManager, type SceneManager } from './core/SceneManager';
 import { createGameScene } from './scenes/GameScene';
 import { createSettingsScene } from './scenes/SettingsScene';
 import { loadSettings, saveSettings, type Settings } from './services/Settings';
-import { installOrientationLock } from './ui/OrientationLock';
 import { tickTweens, tweenGroup } from './entities/animations/Tween';
 import { preloadAssets } from './assets';
 
@@ -91,7 +90,7 @@ export async function mountRabbitMath(el: HTMLElement, ctx: GameContext): Promis
     saveSettings(settings.current);
     const rt: Runtime = { el, sm, physics, settings };
 
-    const disposeOrientation = installOrientationLock(el);
+    const disposeOrientation = installOrientationLock(el, 'landscape');
     cleanups.push(disposeOrientation);
     const exit = createExitButton(el, () => ctx.onExit(), { fullscreen: false });
     cleanups.push(() => exit.dispose());

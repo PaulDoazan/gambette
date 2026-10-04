@@ -37,16 +37,20 @@ function fullscreenAvailable(el: FsElement): boolean {
  * confirmation. Sur mobile (et si l'API Fullscreen est disponible), un bouton
  * plein écran apparaît juste à côté et bascule l'affichage du jeu.
  * `opts.fullscreen: false` désactive ce bouton (jeu qui fournit le sien).
+ * `opts.placement: 'side'` place le bouton sur le bord gauche, centré
+ * verticalement (jeux dont le haut d'écran est une zone de jeu).
  */
 export function createExitButton(
   parent: HTMLElement,
   onExit: () => void,
-  opts: { fullscreen?: boolean } = {},
+  opts: { fullscreen?: boolean; placement?: 'top' | 'side' } = {},
 ): ExitButton {
   const wrap = document.createElement('div');
-  wrap.style.cssText =
-    'position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;' +
-    'display:flex;align-items:center;gap:8px;';
+  const position =
+    (opts.placement ?? 'top') === 'side'
+      ? 'position:absolute;left:12px;top:50%;transform:translateY(-50%);'
+      : 'position:absolute;top:12px;left:50%;transform:translateX(-50%);';
+  wrap.style.cssText = position + 'z-index:6;display:flex;align-items:center;gap:8px;';
 
   const exit = document.createElement('button');
   exit.dataset.test = 'game-exit';
