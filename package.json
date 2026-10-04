@@ -12,6 +12,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "dev": "turbo run dev",
+    "dev:rabbit-math": "pnpm --filter @gambette/game-rabbit-math dev",
+    "dev:passe-trappe": "pnpm --filter @gambette/game-passe-trappe dev",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
