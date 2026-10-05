@@ -24,11 +24,6 @@ export const DROP_MAX_SPEED = 300;
 export const PUSHED_MAX_SPEED = 120;
 
 export const CATEGORY = { PUCK: 0x1, WALL: 0x2, ELASTIC: 0x4 } as const;
-/** Vibration d'un mauvais palet relâché : durée (ms) et amplitude (px), purement visuelle. */
-export const VIBRATE_MS = 400;
-export const VIBRATE_AMPLITUDE = 6;
-/** Vitesse max (px/s) d'un mauvais palet relâché : il bouge un peu, sans atteindre le trou. */
-export const WRONG_LAUNCH_SPEED = 120;
 /**
  * Vitesse (px/s) donnée vers l'avant à un palet immobile resté à cheval sur l'élastique alors qu'il
  * l'ignore (mauvais palet relâché, saisie annulée) : il repasse devant et l'élastique se réarme.

@@ -1,13 +1,7 @@
 import { MouseJoint, Vec2, type Body, type Contact } from 'planck';
 import type { PhysicsWorld } from '../core/PhysicsWorld';
 import type { Puck } from '../entities/Puck';
-import {
-  DRAG_MAX_FORCE_PER_KG,
-  DROP_MAX_SPEED,
-  PUSHED_MAX_SPEED,
-  VIBRATE_MS,
-  WRONG_LAUNCH_SPEED,
-} from '../config/physics';
+import { DRAG_MAX_FORCE_PER_KG, DROP_MAX_SPEED, PUSHED_MAX_SPEED } from '../config/physics';
 import { PUCK_RADIUS } from '../config/dimensions';
 import { campOf, clampToCamp } from '../domain/rules';
 import { elasticLine, launchVelocity } from '../domain/elastic';
@@ -26,6 +20,8 @@ export interface DragController {
 interface Grab {
   puck: Puck;
   joint: MouseJoint;
+  /** Position du palet au début du glisser : un mauvais palet tiré y revient. */
+  start: Vec;
 }
 
 const GRAB_RADIUS = PUCK_RADIUS * 1.3;
@@ -88,6 +84,12 @@ export function createDragController(deps: {
     pushed.clear();
   });
 
+  /** Centre du palet devant l'élastique de `player` (côté cloison). */
+  const inFrontOf = (p: Vec, player: Player): boolean => {
+    const line = elasticLine(player);
+    return player === 'A' ? p.y <= line.y : p.y >= line.y;
+  };
+
   const release = (player: Player, launch: boolean): void => {
     const grab = grabs.get(player);
     if (!grab) return;
@@ -96,15 +98,17 @@ export function createDragController(deps: {
     const { puck } = grab;
     const v = launch ? launchVelocity(puck.position(), elasticLine(player), player) : null;
     const allowed = deps.canLaunch?.(puck) ?? true;
-    if (launch && !allowed) {
-      // Mauvais palet : il vibre et ne part presque pas.
-      puck.vibrate(VIBRATE_MS);
-      if (v) {
-        const n = Math.hypot(v.x, v.y);
-        puck.setVelocity({ x: (v.x / n) * WRONG_LAUNCH_SPEED, y: (v.y / n) * WRONG_LAUNCH_SPEED });
-        return;
-      }
-    } else if (v) {
+    if (v && !allowed) {
+      // Mauvais palet tiré à l'élastique : il ne part pas, il revient aussitôt, immobile, là où le
+      // glisser a commencé.
+      puck.setVelocity({ x: 0, y: 0 });
+      puck.body.setAngularVelocity(0);
+      puck.setPosition(grab.start);
+      puck.syncView();
+      puck.setIgnoreElastic(!inFrontOf(grab.start, player));
+      return;
+    }
+    if (v) {
       puck.setVelocity(v);
       return;
     }
@@ -116,9 +120,7 @@ export function createDragController(deps: {
       puck.setVelocity({ x: cur.x * k, y: cur.y * k });
     }
     // Derrière la ligne, l'élastique reste ignoré : la scène ramène le palet devant avant de le réarmer.
-    const line = elasticLine(player);
-    const behind = player === 'A' ? puck.position().y > line.y : puck.position().y < line.y;
-    if (!behind) puck.setIgnoreElastic(false);
+    if (inFrontOf(puck.position(), player)) puck.setIgnoreElastic(false);
   };
 
   return {
@@ -142,7 +144,7 @@ export function createDragController(deps: {
         ),
       )!;
       joint.setTarget(toTarget(clampToCamp(p, player)));
-      grabs.set(player, { puck, joint });
+      grabs.set(player, { puck, joint, start: puck.position() });
     },
     pointerMove: (id, p) => {
       const player = router.owner(id);

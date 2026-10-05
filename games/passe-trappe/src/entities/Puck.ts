@@ -8,7 +8,6 @@ import {
   PUCK_FRICTION,
   PUCK_LINEAR_DAMPING,
   PUCK_RESTITUTION,
-  VIBRATE_AMPLITUDE,
 } from '../config/physics';
 import { COLORS } from '../config/theme';
 import { campOf } from '../domain/rules';
@@ -28,10 +27,8 @@ export interface Puck {
   /** Valeur affichée sur le palet (null : aucune). */
   setLabel(value: number | null): void;
   label(): number | null;
-  /** Vibration purement visuelle (ms) autour de la position physique. */
-  vibrate(ms: number): void;
-  isVibrating(): boolean;
-  syncView(dtMs?: number): void;
+  /** Met la vue à jour : position, rotation, étiquette droite pour le joueur du camp. */
+  syncView(): void;
   destroy(): void;
 }
 
@@ -80,8 +77,6 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   view.addChild(text);
   let ignoring = false;
   let value: number | null = null;
-  let vibrateLeft = 0;
-  let vibrateT = 0;
 
   const api: Puck = {
     view,
@@ -116,20 +111,9 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
       text.text = v === null ? '' : String(v);
     },
     label: () => value,
-    vibrate: (ms) => {
-      vibrateLeft = ms;
-      vibrateT = 0;
-    },
-    isVibrating: () => vibrateLeft > 0,
-    syncView: (dtMs = 0) => {
+    syncView: () => {
       const p = api.position();
-      let dx = 0;
-      if (vibrateLeft > 0) {
-        vibrateLeft = Math.max(0, vibrateLeft - dtMs);
-        vibrateT += dtMs;
-        dx = vibrateLeft > 0 ? Math.sin(vibrateT * 0.09) * VIBRATE_AMPLITUDE : 0;
-      }
-      view.position.set(p.x + dx, p.y);
+      view.position.set(p.x, p.y);
       const angle = body.getAngle();
       view.rotation = angle;
       // Étiquette droite pour le joueur du camp où se trouve le palet.

@@ -224,7 +224,7 @@ export function createGameScene(deps: {
       physics.step(deltaMs);
       const counts: Record<Player, number> = { A: 0, B: 0 };
       for (const puck of pucks) {
-        puck.syncView(deltaMs);
+        puck.syncView();
         counts[campOf(puck.position().y)] += 1;
         const heldNow = PLAYERS.some((pl) => drag.held(pl) === puck);
         if (!heldNow && puck.ignoresElastic()) {

@@ -3,7 +3,6 @@ import type { Text } from 'pixi.js';
 import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWorld';
 import { createPuck } from '../../src/entities/Puck';
 import { MID_Y } from '../../src/config/dimensions';
-import { VIBRATE_MS } from '../../src/config/physics';
 
 let physics: PhysicsWorld;
 afterEach(() => physics.destroy());
@@ -32,23 +31,5 @@ describe('Puck — étiquette', () => {
     p.setPosition({ x: 360, y: MID_Y - 200 });
     p.syncView();
     expect(p.view.rotation + labelText(p.view).rotation).toBeCloseTo(Math.PI, 6);
-  });
-});
-
-describe('Puck — vibration', () => {
-  it('oscille autour de la position physique puis s’arrête', () => {
-    physics = createPhysicsWorld();
-    const p = createPuck(physics, { x: 360, y: 900 });
-    p.vibrate(VIBRATE_MS);
-    expect(p.isVibrating()).toBe(true);
-    let moved = false;
-    for (let t = 0; t < VIBRATE_MS; t += 16) {
-      p.syncView(16);
-      if (Math.abs(p.view.x - p.position().x) > 0.5) moved = true;
-    }
-    expect(moved).toBe(true);
-    p.syncView(16);
-    expect(p.isVibrating()).toBe(false);
-    expect(p.view.x).toBeCloseTo(p.position().x, 6);
   });
 });

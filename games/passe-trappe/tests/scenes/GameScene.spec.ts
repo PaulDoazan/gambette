@@ -8,7 +8,6 @@ import {
 import { campOf } from '../../src/domain/rules';
 import { elasticLine } from '../../src/domain/elastic';
 import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
-import { WRONG_LAUNCH_SPEED } from '../../src/config/physics';
 import {
   CALC_BLOCK,
   CALC_BLOCK_SIZE,
@@ -457,17 +456,18 @@ describe('GameScene — calcul', () => {
       scene.drag.pointerUp(1);
       for (let i = 0; i < 3; i++) scene.tick(1000 / 60);
       const v = puck.velocity();
-      const result = { speed: Math.hypot(v.x, v.y), vy: v.y, vibrating: puck.isVibrating() };
+      const p = puck.position();
+      const result = { speed: Math.hypot(v.x, v.y), vy: v.y, x: p.x, y: p.y };
       scene.destroy();
       physics.destroy();
       return result;
     };
     const wrong = launch('wrong');
-    expect(wrong.speed).toBeLessThanOrEqual(WRONG_LAUNCH_SPEED + 1);
-    expect(wrong.vibrating).toBe(true);
+    // Mauvais palet : replacé à l'endroit où le glisser a commencé, immobile.
+    expect(wrong.speed).toBeLessThan(1);
+    expect(Math.hypot(wrong.x - 360, wrong.y - 950)).toBeLessThan(2);
     const right = launch('right');
     expect(right.vy).toBeLessThan(-500);
-    expect(right.vibrating).toBe(false);
   });
 
   it('destroy libère tous les corps planck (hors ancrage)', () => {
