@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Container, type FederatedPointerEvent } from 'pixi.js';
 import type { GameContext } from '@gambette/game-sdk';
 import type { Player } from '../src/domain/types';
+import { EXIT_REVEAL_DELAY_MS } from '../src/mount';
 
 interface FakeApp {
   stage: Container;
@@ -184,10 +185,16 @@ describe('passeTrappe.mount — cycle de victoire', () => {
     tick({ deltaMS: 16 });
     expect(scene.tick).not.toHaveBeenCalled();
 
+    vi.useFakeTimers();
     replay();
     expect(scene.reset).toHaveBeenCalledTimes(1);
     expect(stage.getChildByLabel('replay', true)).toBeNull();
+    // Le clic qui suit le tap sur « Rejouer » ne doit pas atteindre les boutons du SDK
+    // (plein écran, quitter) : ils ne réapparaissent qu'après la fin du geste.
+    expect(exitWrap(el).style.display).toBe('none');
+    vi.advanceTimersByTime(EXIT_REVEAL_DELAY_MS);
     expect(exitWrap(el).style.display).not.toBe('none');
+    vi.useRealTimers();
     touch(stage, 3);
     expect(scene.drag.pointerDown).toHaveBeenCalledTimes(2);
     tick({ deltaMS: 16 });
@@ -254,11 +261,15 @@ describe('réglages', () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
     let panel = openSettings();
+    vi.useFakeTimers();
     tapIn(panel, 'close');
     expect(fakeScenes).toHaveLength(1);
     expect(fakeApps[0]!.stage.getChildByLabel('settings', true)).toBeNull();
     const exit = el.querySelector('[data-test="game-exit"]')!.parentElement as HTMLElement;
+    expect(exit.style.display).toBe('none');
+    vi.advanceTimersByTime(EXIT_REVEAL_DELAY_MS);
     expect(exit.style.display).not.toBe('none');
+    vi.useRealTimers();
     panel = openSettings();
     tapIn(panel, 'plus');
     tapIn(panel, 'close');
@@ -295,5 +306,35 @@ describe('hauteur du plateau', () => {
     expect(dims.DESIGN_HEIGHT).toBeGreaterThan(1280);
     instance.unmount();
     dims.configureBoard(1280);
+  });
+});
+
+describe('boutons du SDK après un écran en surimpression', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('nouvelle victoire avant la fin du délai → les boutons restent masqués', async () => {
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    const stage = fakeApps[0]!.stage;
+    const scene = fakeScenes[0] as FakeScene;
+    const wrap = el.querySelector('[data-test="game-exit"]')!.parentElement as HTMLElement;
+    vi.useFakeTimers();
+    scene.win('A');
+    stage.getChildByLabel('replay', true)!.emit('pointertap', {} as FederatedPointerEvent);
+    scene.win('B');
+    vi.advanceTimersByTime(EXIT_REVEAL_DELAY_MS * 2);
+    expect(wrap.style.display).toBe('none');
+    instance.unmount();
+  });
+
+  it('démontage pendant le délai → aucune erreur', async () => {
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    const stage = fakeApps[0]!.stage;
+    vi.useFakeTimers();
+    (fakeScenes[0] as FakeScene).win('A');
+    stage.getChildByLabel('replay', true)!.emit('pointertap', {} as FederatedPointerEvent);
+    instance.unmount();
+    expect(() => vi.advanceTimersByTime(EXIT_REVEAL_DELAY_MS * 2)).not.toThrow();
   });
 });

@@ -16,6 +16,13 @@ import { loadSettings, saveSettings, settingsChanged } from './services/Settings
 import { createVictoryScene, type VictoryScene } from './scenes/VictoryScene';
 import { DESIGN_HEIGHT, DESIGN_WIDTH, boardHeightFor, configureBoard } from './config/dimensions';
 
+/**
+ * Délai avant de réafficher les boutons du SDK (quitter, plein écran) quand un écran en
+ * surimpression se ferme : le « click » que le navigateur émet après le tap sur « Rejouer » ou
+ * « Fermer » ne doit pas tomber sur ces boutons, qui réapparaissent au même endroit.
+ */
+export const EXIT_REVEAL_DELAY_MS = 400;
+
 export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promise<GameInstance> {
   // Plateau en pleine hauteur : sa hauteur logique suit les proportions de l'écran, fixée au
   // montage (un redimensionnement ultérieur ne fait que remettre à l'échelle).
@@ -39,6 +46,17 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
     };
     cleanups.push(closeVictory);
 
+    // Boutons du SDK masqués pendant un écran en surimpression, réaffichés après la fin du geste.
+    let revealTimer: ReturnType<typeof setTimeout> | undefined;
+    const hideExit = (): void => {
+      clearTimeout(revealTimer);
+      exit.setHidden(true);
+    };
+    const revealExitSoon = (): void => {
+      clearTimeout(revealTimer);
+      revealTimer = setTimeout(() => exit.setHidden(false), EXIT_REVEAL_DELAY_MS);
+    };
+
     let settings = loadSettings();
     let game: GameScene | null = null;
     const startGame = (): void => {
@@ -48,12 +66,12 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
         pairs: settings.selectedPairs,
         onWin: (winner) => {
           // L'écran de victoire a son propre « Quitter » : celui du SDK le chevaucherait.
-          exit.setHidden(true);
+          hideExit();
           victory = createVictoryScene({
             winner,
             onReplay: () => {
               closeVictory();
-              exit.setHidden(false);
+              revealExitSoon();
               game?.reset();
             },
             onQuit: () => ctx.onExit(),
@@ -83,14 +101,14 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
     };
     const openSettings = (): void => {
       if (victory || panel || !game) return;
-      exit.setHidden(true);
+      hideExit();
       game.drag.reset();
       panel = createSettingsScene({
         initial: settings,
         onOpenCalcsPicker: (current) => openCalcsPicker({ initial: current, container: el }),
         onClose: (next) => {
           closePanel();
-          exit.setHidden(false);
+          revealExitSoon();
           if (settingsChanged(settings, next)) {
             saveSettings(next);
             settings = next;
@@ -133,6 +151,7 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
     cleanups.push(installOrientationLock(el, 'portrait'));
     const exit = createExitButton(el, () => ctx.onExit(), { placement: 'side' });
     cleanups.push(() => exit.dispose());
+    cleanups.push(() => clearTimeout(revealTimer));
 
     const onTick = (t: Ticker): void => {
       if (!victory && !panel) game?.tick(t.deltaMS);
