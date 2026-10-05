@@ -2,6 +2,8 @@ import { Container, Graphics } from 'pixi.js';
 import { Box, Edge, Vec2, type Body } from 'planck';
 import type { PhysicsWorld, FixtureTag } from '../core/PhysicsWorld';
 import {
+  CALC_BLOCK,
+  CALC_BLOCK_SIZE,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   DIVIDER_THICKNESS,
@@ -79,6 +81,11 @@ export function createBoard(physics: PhysicsWorld): Board {
   addEdge(physics, bodies, 0, H, 0, 0, CATEGORY.WALL);
   addBox(physics, bodies, segmentWidth / 2, MID_Y, segmentWidth, DIVIDER_THICKNESS);
   addBox(physics, bodies, W - segmentWidth / 2, MID_Y, segmentWidth, DIVIDER_THICKNESS);
+  // Blocs de calcul solides : les palets rebondissent dessus au lieu de les recouvrir.
+  for (const p of PLAYERS) {
+    const c = CALC_BLOCK[p];
+    addBox(physics, bodies, c.x, c.y, CALC_BLOCK_SIZE.w, CALC_BLOCK_SIZE.h);
+  }
   for (const p of PLAYERS) {
     const line = elasticLine(p);
     addEdge(physics, bodies, line.left.x, line.y, line.right.x, line.y, CATEGORY.ELASTIC);

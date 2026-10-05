@@ -4,7 +4,13 @@ import { createBoard } from '../../src/entities/Board';
 import { createPuck } from '../../src/entities/Puck';
 import { campOf } from '../../src/domain/rules';
 import { elasticLine } from '../../src/domain/elastic';
-import { DESIGN_WIDTH, MID_Y, PUCK_RADIUS } from '../../src/config/dimensions';
+import {
+  CALC_BLOCK,
+  CALC_BLOCK_SIZE,
+  DESIGN_WIDTH,
+  MID_Y,
+  PUCK_RADIUS,
+} from '../../src/config/dimensions';
 
 let physics: PhysicsWorld;
 const run = (ms: number): void => {
@@ -80,4 +86,30 @@ describe('plateau planck', () => {
     run(200);
     expect(p.position().y).toBeLessThan(line.y);
   });
+
+  /** Distance entre le centre d'un palet et le rectangle d'un bloc de calcul (0 si dedans). */
+  const distToBlock = (pl: 'A' | 'B', p: { x: number; y: number }) => {
+    const c = CALC_BLOCK[pl];
+    const dx = Math.max(Math.abs(p.x - c.x) - CALC_BLOCK_SIZE.w / 2, 0);
+    const dy = Math.max(Math.abs(p.y - c.y) - CALC_BLOCK_SIZE.h / 2, 0);
+    return Math.hypot(dx, dy);
+  };
+
+  for (const pl of ['A', 'B'] as const) {
+    it(`palet lancé contre le bloc de calcul ${pl} → il rebondit sans passer dessus`, () => {
+      setup();
+      const c = CALC_BLOCK[pl];
+      const toward = pl === 'A' ? -1 : 1; // vers la cloison
+      const start = { x: c.x, y: c.y - toward * (CALC_BLOCK_SIZE.h / 2 + PUCK_RADIUS + 150) };
+      const p = createPuck(physics, start);
+      p.setVelocity({ x: 0, y: toward * 1500 });
+      let bounced = false;
+      for (let i = 0; i < 60; i++) {
+        physics.step(1000 / 60);
+        expect(distToBlock(pl, p.position())).toBeGreaterThanOrEqual(PUCK_RADIUS - 1);
+        if (Math.sign(p.velocity().y) === -toward) bounced = true;
+      }
+      expect(bounced).toBe(true);
+    });
+  }
 });
