@@ -14,9 +14,14 @@ import { createSettingsScene, type SettingsScene } from './scenes/SettingsScene'
 import { createGearButton } from './entities/GearButton';
 import { loadSettings, saveSettings, settingsChanged } from './services/Settings';
 import { createVictoryScene, type VictoryScene } from './scenes/VictoryScene';
-import { DESIGN_HEIGHT, DESIGN_WIDTH } from './config/dimensions';
+import { DESIGN_HEIGHT, DESIGN_WIDTH, boardHeightFor, configureBoard } from './config/dimensions';
 
 export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promise<GameInstance> {
+  // Plateau en pleine hauteur : sa hauteur logique suit les proportions de l'écran, fixée au
+  // montage (un redimensionnement ultérieur ne fait que remettre à l'échelle).
+  const w = el.clientWidth || window.innerWidth;
+  const h = el.clientHeight || window.innerHeight;
+  configureBoard(boardHeightFor(w, h));
   const app = await createApp(el);
   // Tout ce qui est installé après createApp : libéré dans l'ordre inverse, au unmount comme sur échec.
   const cleanups: Array<() => void> = [() => app.destroy()];

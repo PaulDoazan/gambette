@@ -283,3 +283,17 @@ describe('réglages', () => {
     expect(el.children).toHaveLength(0);
   });
 });
+
+describe('hauteur du plateau', () => {
+  it('le montage adapte la hauteur du plateau à l’écran', async () => {
+    const dims = await import('../src/config/dimensions');
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    expect(dims.DESIGN_HEIGHT).toBe(dims.boardHeightFor(390, 844));
+    expect(dims.DESIGN_HEIGHT).toBeGreaterThan(1280);
+    instance.unmount();
+    dims.configureBoard(1280);
+  });
+});

@@ -12,7 +12,6 @@ export interface SettingsScene {
 
 const PANEL = { w: 560, h: 460 } as const;
 const CX = DESIGN_WIDTH / 2;
-const CY = DESIGN_HEIGHT / 2;
 
 const makeText = (text: string, size: number, color: number): Text => {
   const t = new Text({
@@ -50,6 +49,8 @@ export function createSettingsScene(deps: {
   onOpenCalcsPicker(current: Pair[]): Promise<Pair[]>;
   onClose(next: Settings): void;
 }): SettingsScene {
+  // Centre vertical lu à la création : la hauteur du plateau dépend de l'écran.
+  const CY = DESIGN_HEIGHT / 2;
   let pucks = deps.initial.pucksPerPlayer;
   let pairs: Pair[] = [...deps.initial.selectedPairs];
   let destroyed = false;
