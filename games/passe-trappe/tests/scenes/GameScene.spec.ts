@@ -126,6 +126,28 @@ describe('GameScene', () => {
   });
 });
 
+describe('GameScene — Rejouer pendant un retournement', () => {
+  it('le retournement est terminé net et la vue est à la nouvelle place du palet', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
+    const puck = scene.pucks()[0]!;
+    puck.flip({ x: 360, y: 1150 });
+    scene.tick(1000 / 60);
+    scene.reset();
+    expect(puck.isFlipping()).toBe(false);
+    expect(puck.view.position.x).toBeCloseTo(puck.position().x, 6);
+    expect(puck.view.position.y).toBeCloseTo(puck.position().y, 6);
+    expect(puck.view.scale.y).toBeCloseTo(1, 6);
+    scene.destroy();
+  });
+});
+
 describe('initialPuckPositions', () => {
   for (const count of [5, 6, 8, 10]) {
     it(`${count} palets : dans le camp, devant l’élastique, sans chevauchement`, () => {

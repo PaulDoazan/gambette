@@ -41,7 +41,7 @@ export function createDragController(deps: {
     let bestD = GRAB_RADIUS;
     for (const puck of deps.pucks()) {
       const q = puck.position();
-      if (campOf(q.y) !== player) continue;
+      if (campOf(q.y) !== player || puck.isFlipping()) continue;
       const d = Math.hypot(q.x - p.x, q.y - p.y);
       if (d <= bestD && ![...grabs.values()].some((g) => g.puck === puck)) {
         best = puck;
@@ -99,11 +99,13 @@ export function createDragController(deps: {
     const v = launch ? launchVelocity(puck.position(), elasticLine(player), player) : null;
     const allowed = deps.canLaunch?.(puck) ?? true;
     if (v && !allowed) {
-      // Mauvais palet tiré à l'élastique : il ne part pas, il revient aussitôt, immobile, là où le
-      // glisser a commencé.
+      // Mauvais palet tiré à l'élastique : il ne part pas. Son corps revient aussitôt, immobile, là
+      // où le glisser a commencé ; sa vue y retourne en se retournant comme une pièce lancée.
+      const releasedAt = puck.position();
       puck.setVelocity({ x: 0, y: 0 });
       puck.body.setAngularVelocity(0);
       puck.setPosition(grab.start);
+      puck.flip(releasedAt);
       puck.syncView();
       puck.setIgnoreElastic(!inFrontOf(grab.start, player));
       return;

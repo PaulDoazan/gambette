@@ -17,7 +17,7 @@ import {
 } from '../config/dimensions';
 import { elasticLine, stretchOf } from '../domain/elastic';
 import { campOf, createWinDetector } from '../domain/rules';
-import { ELASTIC_NUDGE_SPEED } from '../config/physics';
+import { ELASTIC_NUDGE_SPEED, FLIP_MS } from '../config/physics';
 import { createCrossingDetector, type Crossing } from '../domain/crossings';
 import { extraDistractor, labelCamp, pickCalc } from '../domain/quiz';
 import { PLAYERS, type Player, type Vec } from '../domain/types';
@@ -209,7 +209,7 @@ export function createGameScene(deps: {
       puck.body.setAngularVelocity(0);
       puck.setPosition(positions[i]!);
       puck.setIgnoreElastic(false);
-      puck.syncView();
+      puck.syncView(FLIP_MS); // termine un éventuel retournement en cours
     });
   };
 
@@ -224,7 +224,7 @@ export function createGameScene(deps: {
       physics.step(deltaMs);
       const counts: Record<Player, number> = { A: 0, B: 0 };
       for (const puck of pucks) {
-        puck.syncView();
+        puck.syncView(deltaMs);
         counts[campOf(puck.position().y)] += 1;
         const heldNow = PLAYERS.some((pl) => drag.held(pl) === puck);
         if (!heldNow && puck.ignoresElastic()) {

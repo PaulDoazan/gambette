@@ -29,3 +29,12 @@ export const CATEGORY = { PUCK: 0x1, WALL: 0x2, ELASTIC: 0x4 } as const;
  * l'ignore (mauvais palet relâché, saisie annulée) : il repasse devant et l'élastique se réarme.
  */
 export const ELASTIC_NUDGE_SPEED = 160;
+
+/**
+ * Retournement d'un mauvais palet tiré (purement visuel) : il décolle, tourne sur lui-même comme
+ * une pièce lancée et atterrit à son point de départ. Durée (ms), nombre de tours, agrandissement
+ * maximal au sommet du saut.
+ */
+export const FLIP_MS = 650;
+export const FLIP_TURNS = 2;
+export const FLIP_LIFT = 0.35;

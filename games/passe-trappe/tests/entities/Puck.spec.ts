@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import type { Text } from 'pixi.js';
 import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWorld';
 import { createPuck } from '../../src/entities/Puck';
+import { FLIP_MS } from '../../src/config/physics';
 import { MID_Y } from '../../src/config/dimensions';
 
 let physics: PhysicsWorld;
@@ -31,5 +32,41 @@ describe('Puck — étiquette', () => {
     p.setPosition({ x: 360, y: MID_Y - 200 });
     p.syncView();
     expect(p.view.rotation + labelText(p.view).rotation).toBeCloseTo(Math.PI, 6);
+  });
+});
+
+describe('Puck — retournement (mauvais palet)', () => {
+  it('décolle, se retourne comme une pièce et atterrit à sa position physique', () => {
+    physics = createPhysicsWorld();
+    const p = createPuck(physics, { x: 360, y: 950 });
+    p.flip({ x: 360, y: 1150 });
+    expect(p.isFlipping()).toBe(true);
+    let maxScale = 0;
+    let negativeFace = false;
+    let between = false;
+    for (let t = 0; t < FLIP_MS; t += 16) {
+      p.syncView(16);
+      maxScale = Math.max(maxScale, Math.abs(p.view.scale.x));
+      if (p.view.scale.y < 0) negativeFace = true;
+      if (p.view.y > 960 && p.view.y < 1140) between = true;
+    }
+    expect(maxScale).toBeGreaterThan(1.2);
+    expect(negativeFace).toBe(true);
+    expect(between).toBe(true);
+    p.syncView(16);
+    expect(p.isFlipping()).toBe(false);
+    expect(p.view.position.x).toBeCloseTo(360, 6);
+    expect(p.view.position.y).toBeCloseTo(950, 6);
+    expect(p.view.scale.x).toBeCloseTo(1, 6);
+    expect(p.view.scale.y).toBeCloseTo(1, 6);
+  });
+
+  it('au début du retournement, la vue part du point de relâcher', () => {
+    physics = createPhysicsWorld();
+    const p = createPuck(physics, { x: 360, y: 950 });
+    p.flip({ x: 300, y: 1150 });
+    p.syncView(0);
+    expect(p.view.position.x).toBeCloseTo(300, 6);
+    expect(p.view.position.y).toBeCloseTo(1150, 6);
   });
 });

@@ -10,6 +10,7 @@ import {
   PUCK_RESTITUTION,
 } from '../config/physics';
 import { COLORS } from '../config/theme';
+import { FLIP_LIFT, FLIP_MS, FLIP_TURNS } from '../config/physics';
 import { campOf } from '../domain/rules';
 import type { Vec } from '../domain/types';
 
@@ -27,8 +28,17 @@ export interface Puck {
   /** Valeur affichée sur le palet (null : aucune). */
   setLabel(value: number | null): void;
   label(): number | null;
-  /** Met la vue à jour : position, rotation, étiquette droite pour le joueur du camp. */
-  syncView(): void;
+  /**
+   * Retournement visuel « pièce lancée » depuis `from` jusqu'à la position physique du palet
+   * (mauvais palet tiré). Le corps physique ne bouge pas.
+   */
+  flip(from: Vec): void;
+  isFlipping(): boolean;
+  /**
+   * Met la vue à jour : position, rotation, étiquette droite pour le joueur du camp ; fait
+   * avancer le retournement de `dtMs`.
+   */
+  syncView(dtMs?: number): void;
   destroy(): void;
 }
 
@@ -77,6 +87,8 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   view.addChild(text);
   let ignoring = false;
   let value: number | null = null;
+  let flipFrom: Vec | null = null;
+  let flipElapsed = 0;
 
   const api: Puck = {
     view,
@@ -111,9 +123,31 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
       text.text = v === null ? '' : String(v);
     },
     label: () => value,
-    syncView: () => {
+    flip: (from) => {
+      flipFrom = { ...from };
+      flipElapsed = 0;
+    },
+    isFlipping: () => flipFrom !== null,
+    syncView: (dtMs = 0) => {
       const p = api.position();
-      view.position.set(p.x, p.y);
+      if (flipFrom) {
+        flipElapsed += dtMs;
+        if (flipElapsed >= FLIP_MS) flipFrom = null;
+      }
+      if (flipFrom) {
+        const t = flipElapsed / FLIP_MS;
+        const ease = t * t * (3 - 2 * t);
+        view.position.set(
+          flipFrom.x + (p.x - flipFrom.x) * ease,
+          flipFrom.y + (p.y - flipFrom.y) * ease,
+        );
+        // Saut : plus gros au sommet ; tours de pièce : la hauteur s'écrase puis s'inverse.
+        const lift = 1 + FLIP_LIFT * Math.sin(Math.PI * t);
+        view.scale.set(lift, lift * Math.cos(2 * Math.PI * FLIP_TURNS * t));
+      } else {
+        view.position.set(p.x, p.y);
+        view.scale.set(1, 1);
+      }
       const angle = body.getAngle();
       view.rotation = angle;
       // Étiquette droite pour le joueur du camp où se trouve le palet.

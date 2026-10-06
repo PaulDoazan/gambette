@@ -172,13 +172,25 @@ describe('DragController — mauvais palet', () => {
     expect(puck.position().y).toBeCloseTo(950, 3);
     expect(Math.hypot(puck.velocity().x, puck.velocity().y)).toBeLessThan(1e-6);
     expect(puck.ignoresElastic()).toBe(false);
+    expect(puck.isFlipping()).toBe(true);
     step(30);
     expect(Math.hypot(puck.position().x - 360, puck.position().y - 950)).toBeLessThan(1);
+  });
+
+  it('un palet en plein retournement ne peut pas être saisi', () => {
+    physics = createPhysicsWorld();
+    createBoard(physics);
+    const puck = createPuck(physics, { x: 360, y: 950 });
+    const drag = createDragController({ physics, pucks: () => [puck] });
+    puck.flip({ x: 360, y: 1150 });
+    drag.pointerDown(1, { x: 360, y: 950 });
+    expect(drag.held('A')).toBeNull();
   });
 
   it('bon palet : lancer normal', () => {
     const puck = stretchAndRelease(true);
     expect(puck.velocity().y).toBeLessThan(-500);
+    expect(puck.isFlipping()).toBe(false);
   });
 
   it('mauvais palet simplement déplacé (élastique non tendu) : lâché sur place, pas replacé', () => {
