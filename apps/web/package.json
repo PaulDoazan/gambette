@@ -12,6 +12,7 @@
     "lint": "eslint lib composables games.ts --no-error-on-unmatched-pattern"
   },
   "dependencies": {
+    "@gambette/game-passe-trappe": "workspace:*",
     "@gambette/game-rabbit-math": "workspace:*",
     "@gambette/game-sdk": "workspace:*",
     "nuxt": "^4.4.8",

@@ -103,3 +103,51 @@ describe('createExitButton — option fullscreen', () => {
     btn.dispose();
   });
 });
+
+describe('createExitButton — placement', () => {
+  it('top par défaut : centré en haut', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {});
+    const wrap = parent.firstElementChild as HTMLElement;
+    expect(wrap.style.top).toBe('12px');
+    expect(wrap.style.left).toBe('50%');
+    btn.dispose();
+  });
+
+  it('side : bord gauche, centré verticalement', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {}, { placement: 'side' });
+    const wrap = parent.firstElementChild as HTMLElement;
+    expect(wrap.style.left).toBe('12px');
+    expect(wrap.style.top).toBe('50%');
+    expect(wrap.style.transform).toBe('translateY(-50%)');
+    btn.dispose();
+  });
+});
+
+describe('createExitButton — setHidden', () => {
+  it('masque puis réaffiche le bouton', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {});
+    const wrap = parent.firstElementChild as HTMLElement;
+    const initial = wrap.style.display;
+    btn.setHidden(true);
+    expect(wrap.style.display).toBe('none');
+    btn.setHidden(false);
+    expect(wrap.style.display).toBe(initial);
+    btn.dispose();
+  });
+
+  it('referme la confirmation ouverte en masquant', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {});
+    parent.querySelector<HTMLButtonElement>('[data-test="game-exit"]')!.click();
+    btn.setHidden(true);
+    btn.setHidden(false);
+    const panel = parent.querySelector<HTMLElement>('[data-test="game-exit-confirm-panel"]')!;
+    const exit = parent.querySelector<HTMLElement>('[data-test="game-exit"]')!;
+    expect(panel.style.display).toBe('none');
+    expect(exit.style.display).toBe('');
+    btn.dispose();
+  });
+});

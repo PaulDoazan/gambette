@@ -17,6 +17,11 @@ const BY_KEY: Record<string, GameCosmetic> = {
     icon: 'mdi-rabbit',
     traits: ['calcul', 'adresse'],
   },
+  'passe-trappe': {
+    color: 'tertiary',
+    icon: 'mdi-swap-vertical',
+    traits: ['adresse', '2 joueurs'],
+  },
 };
 
 // Pour tout jeu sans habillage dédié : rotation déterministe sur la charte.
