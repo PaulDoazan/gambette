@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import type { Text } from 'pixi.js';
+import type { Container, Text } from 'pixi.js';
 import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWorld';
 import { createPuck } from '../../src/entities/Puck';
 import { FLIP_MS } from '../../src/config/physics';
@@ -8,8 +8,7 @@ import { MID_Y } from '../../src/config/dimensions';
 let physics: PhysicsWorld;
 afterEach(() => physics.destroy());
 
-const labelText = (view: { children: unknown[] }): Text =>
-  (view.children as Array<{ label?: string }>).find((c) => c.label === 'value') as unknown as Text;
+const labelText = (view: Container): Text => view.getChildByLabel('value', true) as Text;
 
 describe('Puck — étiquette', () => {
   it('affiche la valeur et la retire', () => {
@@ -41,24 +40,31 @@ describe('Puck — retournement (mauvais palet)', () => {
     const p = createPuck(physics, { x: 360, y: 950 });
     p.flip({ x: 360, y: 1150 });
     expect(p.isFlipping()).toBe(true);
+    const face = p.view.getChildByLabel('face', true) as Container;
+    const edge = p.view.getChildByLabel('edge', true) as Container;
     let maxScale = 0;
     let negativeFace = false;
     let between = false;
+    let edgeSeen = false;
     for (let t = 0; t < FLIP_MS; t += 16) {
       p.syncView(16);
-      maxScale = Math.max(maxScale, Math.abs(p.view.scale.x));
-      if (p.view.scale.y < 0) negativeFace = true;
+      maxScale = Math.max(maxScale, p.view.scale.x);
+      expect(p.view.scale.y).toBeCloseTo(p.view.scale.x, 6); // saut : agrandissement uniforme
+      if (face.scale.y < 0) negativeFace = true;
+      if (edge.visible && edge.height > 4) edgeSeen = true; // tranche visible de profil
       if (p.view.y > 960 && p.view.y < 1140) between = true;
     }
     expect(maxScale).toBeGreaterThan(1.2);
     expect(negativeFace).toBe(true);
+    expect(edgeSeen).toBe(true);
     expect(between).toBe(true);
     p.syncView(16);
     expect(p.isFlipping()).toBe(false);
     expect(p.view.position.x).toBeCloseTo(360, 6);
     expect(p.view.position.y).toBeCloseTo(950, 6);
     expect(p.view.scale.x).toBeCloseTo(1, 6);
-    expect(p.view.scale.y).toBeCloseTo(1, 6);
+    expect(face.scale.y).toBeCloseTo(1, 6);
+    expect(edge.visible).toBe(false);
   });
 
   it('au début du retournement, la vue part du point de relâcher', () => {

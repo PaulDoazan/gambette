@@ -11,6 +11,8 @@ export let DESIGN_HEIGHT = MIN_BOARD_HEIGHT;
 /** Ligne médiane : sépare le camp B (haut) du camp A (bas). */
 export let MID_Y = DESIGN_HEIGHT / 2;
 export const PUCK_RADIUS = 56;
+/** Épaisseur d'un palet (px), visible sur la tranche quand il se retourne. */
+export const PUCK_THICKNESS = 14;
 /** Nombre de palets par joueur : réglage de la partie. */
 export const MIN_PUCKS = 5;
 export const MAX_PUCKS = 10;

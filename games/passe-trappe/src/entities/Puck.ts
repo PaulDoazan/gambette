@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { Circle, Vec2, type Body } from 'planck';
 import type { PhysicsWorld, FixtureTag } from '../core/PhysicsWorld';
-import { PUCK_RADIUS } from '../config/dimensions';
+import { PUCK_RADIUS, PUCK_THICKNESS } from '../config/dimensions';
 import {
   CATEGORY,
   PUCK_DENSITY,
@@ -51,6 +51,17 @@ const drawPuck = (g: Graphics): void => {
   g.circle(0, 0, PUCK_RADIUS * 0.45).stroke({ width: 2, color: COLORS.puckEdge });
 };
 
+/**
+ * Tranche d'un palet vu de biais : `squash` = écrasement de la face (cos de l'angle de
+ * retournement), `depth` = décalage de la face arrière à l'écran (épaisseur × sin de l'angle).
+ */
+const drawEdge = (e: Graphics, squash: number, depth: number): void => {
+  const ry = PUCK_RADIUS * Math.abs(squash);
+  e.clear();
+  e.ellipse(0, depth, PUCK_RADIUS, ry).fill(COLORS.puckEdge);
+  e.rect(-PUCK_RADIUS, Math.min(0, depth), 2 * PUCK_RADIUS, Math.abs(depth)).fill(COLORS.puckEdge);
+};
+
 export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   const { toM, toPx } = physics;
   const body = physics.world.createBody({
@@ -70,9 +81,17 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
     userData: PUCK_TAG,
   });
   const view = new Container();
+  // Tranche (cylindre) dessinée sous la face, seulement pendant un retournement.
+  const edge = new Graphics();
+  edge.label = 'edge';
+  edge.visible = false;
+  // Face : disque et étiquette, écrasée puis inversée quand le palet tourne comme une pièce.
+  const face = new Container();
+  face.label = 'face';
   const g = new Graphics();
   drawPuck(g);
-  view.addChild(g);
+  face.addChild(g);
+  view.addChild(edge, face);
   const text = new Text({
     text: '',
     style: {
@@ -84,7 +103,7 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   });
   text.label = 'value';
   text.anchor.set(0.5);
-  view.addChild(text);
+  face.addChild(text);
   let ignoring = false;
   let value: number | null = null;
   let flipFrom: Vec | null = null;
@@ -141,12 +160,19 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
           flipFrom.x + (p.x - flipFrom.x) * ease,
           flipFrom.y + (p.y - flipFrom.y) * ease,
         );
-        // Saut : plus gros au sommet ; tours de pièce : la hauteur s'écrase puis s'inverse.
+        // Saut : plus gros au sommet. Tours de pièce : la face s'écrase puis s'inverse, et la
+        // tranche (épaisseur) apparaît, maximale quand le palet est de profil.
         const lift = 1 + FLIP_LIFT * Math.sin(Math.PI * t);
-        view.scale.set(lift, lift * Math.cos(2 * Math.PI * FLIP_TURNS * t));
+        view.scale.set(lift, lift);
+        const phi = 2 * Math.PI * FLIP_TURNS * t;
+        face.scale.y = Math.cos(phi);
+        drawEdge(edge, Math.cos(phi), PUCK_THICKNESS * Math.sin(phi));
+        edge.visible = true;
       } else {
         view.position.set(p.x, p.y);
         view.scale.set(1, 1);
+        face.scale.y = 1;
+        edge.visible = false;
       }
       const angle = body.getAngle();
       view.rotation = angle;

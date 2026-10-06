@@ -2,9 +2,9 @@ import { MouseJoint, Vec2, type Body, type Contact } from 'planck';
 import type { PhysicsWorld } from '../core/PhysicsWorld';
 import type { Puck } from '../entities/Puck';
 import { DRAG_MAX_FORCE_PER_KG, DROP_MAX_SPEED, PUSHED_MAX_SPEED } from '../config/physics';
-import { PUCK_RADIUS } from '../config/dimensions';
+import { MAX_STRETCH, PUCK_RADIUS } from '../config/dimensions';
 import { campOf, clampToCamp } from '../domain/rules';
-import { elasticLine, launchVelocity } from '../domain/elastic';
+import { elasticLine, launchVelocity, stretchOf } from '../domain/elastic';
 import { createTouchRouter } from '../domain/touchRouting';
 import type { Player, Vec } from '../domain/types';
 
@@ -30,6 +30,8 @@ export function createDragController(deps: {
   physics: PhysicsWorld;
   pucks: () => readonly Puck[];
   canLaunch?: (puck: Puck) => boolean;
+  /** Élastique de `player` relâché après un étirement de `stretch` px (il vibre). */
+  onElasticRelease?: (player: Player, stretch: number) => void;
 }): DragController {
   const { physics } = deps;
   const router = createTouchRouter();
@@ -98,6 +100,13 @@ export function createDragController(deps: {
     const { puck } = grab;
     const v = launch ? launchVelocity(puck.position(), elasticLine(player), player) : null;
     const allowed = deps.canLaunch?.(puck) ?? true;
+    if (v) {
+      const stretch = Math.min(
+        stretchOf(puck.position(), elasticLine(player), player),
+        MAX_STRETCH,
+      );
+      deps.onElasticRelease?.(player, stretch);
+    }
     if (v && !allowed) {
       // Mauvais palet tiré à l'élastique : il ne part pas. Son corps revient aussitôt, immobile, là
       // où le glisser a commencé ; sa vue y retourne en se retournant comme une pièce lancée.

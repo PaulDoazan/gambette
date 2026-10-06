@@ -153,6 +153,7 @@ export function createGameScene(deps: {
     physics,
     pucks: () => pucks,
     canLaunch: (p) => isCorrect(p),
+    onElasticRelease: (pl, stretch) => elastics[pl].twang(stretch),
   });
   const detector = createWinDetector();
   let won = false;
@@ -235,7 +236,7 @@ export function createGameScene(deps: {
       for (const pl of PLAYERS) {
         const held = drag.held(pl);
         const pos = held ? held.position() : null;
-        elastics[pl].draw(pos && stretchOf(pos, elasticLine(pl), pl) > 0 ? pos : null);
+        elastics[pl].update(pos && stretchOf(pos, elasticLine(pl), pl) > 0 ? pos : null, deltaMs);
       }
       const crossed = crossings.update(campsNow(), clock);
       if (crossed.length > 0) onCrossings(crossed);

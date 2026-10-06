@@ -38,3 +38,9 @@ export const ELASTIC_NUDGE_SPEED = 160;
 export const FLIP_MS = 650;
 export const FLIP_TURNS = 2;
 export const FLIP_LIFT = 0.35;
+
+/**
+ * Vibration de l'élastique au relâcher (purement visuelle) : oscillation amortie qui part de
+ * l'étirement relâché. Fréquence (Hz), constante d'amortissement (ms), seuil de calme (px).
+ */
+export const ELASTIC_TWANG = { freqHz: 9, decayMs: 170, restPx: 0.5 } as const;

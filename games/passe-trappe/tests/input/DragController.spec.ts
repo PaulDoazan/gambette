@@ -151,11 +151,18 @@ describe('DragController', () => {
 });
 
 describe('DragController — mauvais palet', () => {
+  let releases: Array<{ player: string; stretch: number }> = [];
   const stretchAndRelease = (canLaunch: boolean) => {
     physics = createPhysicsWorld();
     createBoard(physics);
     const puck = createPuck(physics, { x: 360, y: 950 });
-    const drag = createDragController({ physics, pucks: () => [puck], canLaunch: () => canLaunch });
+    releases = [];
+    const drag = createDragController({
+      physics,
+      pucks: () => [puck],
+      canLaunch: () => canLaunch,
+      onElasticRelease: (player, stretch) => releases.push({ player, stretch }),
+    });
     const lineA = elasticLine('A');
     drag.pointerDown(1, { x: 360, y: 950 });
     for (let y = 950; y <= lineA.y + 80; y += 20) {
@@ -173,6 +180,9 @@ describe('DragController — mauvais palet', () => {
     expect(Math.hypot(puck.velocity().x, puck.velocity().y)).toBeLessThan(1e-6);
     expect(puck.ignoresElastic()).toBe(false);
     expect(puck.isFlipping()).toBe(true);
+    expect(releases).toHaveLength(1);
+    expect(releases[0]!.player).toBe('A');
+    expect(releases[0]!.stretch).toBeGreaterThan(20);
     step(30);
     expect(Math.hypot(puck.position().x - 360, puck.position().y - 950)).toBeLessThan(1);
   });
@@ -191,6 +201,7 @@ describe('DragController — mauvais palet', () => {
     const puck = stretchAndRelease(true);
     expect(puck.velocity().y).toBeLessThan(-500);
     expect(puck.isFlipping()).toBe(false);
+    expect(releases).toHaveLength(1);
   });
 
   it('mauvais palet simplement déplacé (élastique non tendu) : lâché sur place, pas replacé', () => {
