@@ -96,7 +96,7 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
     text: '',
     style: {
       fontFamily: 'system-ui, sans-serif',
-      fontSize: 44,
+      fontSize: 37,
       fontWeight: '800',
       fill: COLORS.puckText,
     },
