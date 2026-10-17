@@ -68,7 +68,15 @@ export function createOverlay(
     btn.style.cssText =
       'padding:6px 18px;border:none;border-radius:8px;cursor:pointer;' +
       'font:700 17px system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;';
-    btn.addEventListener('click', () => handlers.onChoice(slot));
+    // Réponse dès l'appui (souris ou doigt) : le timing du pavé compte, attendre
+    // le relâcher du clic le décalerait. Le clic qui suit est ignoré ; seul le
+    // clic clavier (Entrée/Espace, detail 0) répond encore par 'click'.
+    btn.addEventListener('pointerdown', (e) => {
+      if (e.button === 0) handlers.onChoice(slot);
+    });
+    btn.addEventListener('click', (e) => {
+      if (e.detail === 0) handlers.onChoice(slot);
+    });
     buttons.push(btn);
   }
   quizPanel.append(calc, ...buttons);

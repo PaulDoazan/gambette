@@ -93,6 +93,32 @@ describe('mountTowerMath', () => {
     inst.unmount();
   });
 
+  it("répond dès l'appui (pointerdown), sans attendre le relâcher", () => {
+    const el = document.createElement('div');
+    const inst = mountTowerMath(el, makeCtx());
+    good(el).dispatchEvent(new MouseEvent('pointerdown', { button: 0, bubbles: true }));
+    expect(sceneMock.applyCut).toHaveBeenCalledTimes(1);
+    inst.unmount();
+  });
+
+  it("le clic souris qui suit l'appui ne répond pas une seconde fois", () => {
+    const el = document.createElement('div');
+    const inst = mountTowerMath(el, makeCtx());
+    const btn = good(el);
+    btn.dispatchEvent(new MouseEvent('pointerdown', { button: 0, bubbles: true }));
+    btn.dispatchEvent(new MouseEvent('click', { detail: 1, bubbles: true }));
+    expect(sceneMock.applyCut).toHaveBeenCalledTimes(1);
+    inst.unmount();
+  });
+
+  it('ignore le clic droit', () => {
+    const el = document.createElement('div');
+    const inst = mountTowerMath(el, makeCtx());
+    good(el).dispatchEvent(new MouseEvent('pointerdown', { button: 2, bubbles: true }));
+    expect(sceneMock.applyCut).not.toHaveBeenCalled();
+    inst.unmount();
+  });
+
   it('mauvais résultat → chute, onGameOver({score}) après le délai, écran Rejouer', () => {
     vi.useFakeTimers();
     const el = document.createElement('div');
