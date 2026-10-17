@@ -4,6 +4,7 @@ import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWor
 import { createPuck } from '../../src/entities/Puck';
 import { FLIP_MS } from '../../src/config/physics';
 import { MID_Y } from '../../src/config/dimensions';
+import { COLORS } from '../../src/config/theme';
 import { BURST_MS } from '../../src/entities/Burst';
 
 let physics: PhysicsWorld;
@@ -100,5 +101,27 @@ describe('Puck — éclat du chiffre', () => {
     expect(labelText(p.view).scale.x).toBe(1);
     expect(labelText(p.view).tint).toBe(0xffffff);
     expect(p.view.getChildByLabel('burst', true)!.visible).toBe(false);
+  });
+});
+
+describe('Puck — fond du palet pendant l’éclat', () => {
+  const disc = (view: Container) => view.getChildByLabel('disc', true) as Container;
+
+  it('le vert passe au jaune puis revient au vert en fondu ; le chiffre reste lisible', () => {
+    physics = createPhysicsWorld();
+    const p = createPuck(physics, { x: 360, y: 900 });
+    p.setLabel(42);
+    expect(disc(p.view).tint).toBe(COLORS.puck);
+    p.flash();
+    p.syncView(BURST_MS * 0.25); // sommet
+    expect(disc(p.view).tint).toBe(COLORS.button);
+    expect(labelText(p.view).tint).toBe(COLORS.buttonText); // navy sur jaune
+    p.syncView(BURST_MS * 0.4); // fondu en cours : entre jaune et vert
+    const mid = disc(p.view).tint;
+    expect(mid).not.toBe(COLORS.button);
+    expect(mid).not.toBe(COLORS.puck);
+    p.syncView(BURST_MS);
+    expect(disc(p.view).tint).toBe(COLORS.puck);
+    expect(labelText(p.view).tint).toBe(0xffffff);
   });
 });

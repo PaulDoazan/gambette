@@ -46,7 +46,10 @@ export interface Puck {
    */
   flip(from: Vec): void;
   isFlipping(): boolean;
-  /** Éclat du chiffre (nouvelle valeur) : gonfle en jaune, rayons autour ; avance avec syncView. */
+  /**
+   * Éclat (nouvelle valeur) : le fond passe au jaune puis revient au vert en fondu, le chiffre
+   * gonfle, rayons et étincelles autour ; avance avec syncView.
+   */
   flash(): void;
   isFlashing(): boolean;
   /**
@@ -63,8 +66,12 @@ const PUCK_SPARKS = 14;
 const MASK_ALL = CATEGORY.PUCK | CATEGORY.WALL | CATEGORY.ELASTIC;
 const MASK_NO_ELASTIC = CATEGORY.PUCK | CATEGORY.WALL;
 
-const drawPuck = (g: Graphics): void => {
-  g.circle(0, 0, PUCK_RADIUS).fill(COLORS.puck).stroke({ width: 4, color: COLORS.puckEdge });
+/** Disque blanc teinté (sa couleur s'anime pendant l'éclat), puis contour par-dessus. */
+const drawDisc = (g: Graphics): void => {
+  g.circle(0, 0, PUCK_RADIUS).fill(0xffffff);
+};
+const drawRim = (g: Graphics): void => {
+  g.circle(0, 0, PUCK_RADIUS).stroke({ width: 4, color: COLORS.puckEdge });
 };
 
 /**
@@ -104,9 +111,13 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   // Face : disque et étiquette, écrasée puis inversée quand le palet tourne comme une pièce.
   const face = new Container();
   face.label = 'face';
-  const g = new Graphics();
-  drawPuck(g);
-  face.addChild(g);
+  const disc = new Graphics();
+  disc.label = 'disc';
+  drawDisc(disc);
+  disc.tint = COLORS.puck;
+  const rim = new Graphics();
+  drawRim(rim);
+  face.addChild(disc, rim);
   view.addChild(edge, face);
   const text = new Text({
     text: '',
@@ -213,7 +224,10 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
         const f = burstFrame(flashElapsed / BURST_MS);
         if (flashElapsed >= BURST_MS) flashElapsed = null;
         text.scale.set(f.scale);
-        text.tint = mixColor(0xffffff, COLORS.button, f.glow);
+        // Le fond vert passe au jaune puis revient au vert en fondu ; le chiffre, lui, passe au
+        // navy pour rester lisible sur le jaune.
+        disc.tint = mixColor(COLORS.puck, COLORS.button, f.glow);
+        text.tint = mixColor(0xffffff, COLORS.buttonText, f.glow);
         burst.visible = flashElapsed !== null;
         if (burst.visible) drawRays(burst, PUCK_RADIUS + 6, PUCK_RADIUS + 34, f);
         sparksView.visible = burst.visible;
