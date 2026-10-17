@@ -245,21 +245,52 @@ describe('réglages', () => {
     const instance = await passeTrappe.mount(el, ctx());
     const gear = gearOf(el);
     expect(gear.tagName).toBe('BUTTON');
-    expect(gear.textContent).toBe('⚙');
     expect(gear.getAttribute('aria-label')).toBe('Choisir les réglages');
     expect(gear.style.width).toBe('40px');
     expect(gear.style.height).toBe('40px');
     expect(gear.style.borderRadius).toBe('999px');
-    expect(gear.style.background).toBe('rgba(255, 255, 255, 0.12)');
-    // Plus gros que celui de Tour de calcul (22 px), sans contour.
-    expect(parseInt(gear.style.fontSize)).toBeGreaterThanOrEqual(30);
+    // Icône SVG (pas un caractère : centrage exact, sans dépendre de la police), qui remplit
+    // la hauteur de la cloison, sans contour ni fond.
+    const svg = gear.querySelector('svg')!;
+    expect(svg.getAttribute('viewBox')).toBe('2 2 20 20'); // cadré sur l'engrenage, centré
+    expect(svg.getAttribute('width')).toBe('40');
+    expect(svg.getAttribute('height')).toBe('40');
+    expect(gear.style.display).toBe('flex');
+    expect(gear.style.alignItems).toBe('center');
+    expect(gear.style.justifyContent).toBe('center');
     expect(gear.style.borderStyle).toBe('none');
-    expect(gear.style.right).toBe('12px');
-    expect(gear.style.top).toBe('50%');
+    expect(gear.style.backgroundColor).toBe('transparent');
     // Plus d'engrenage dessiné dans la scène (le toucher ne peut plus atteindre le tir).
     expect(fakeApps[0]!.stage.getChildByLabel('gear', true)).toBeNull();
     instance.unmount();
     expect(el.querySelector('[data-test="passe-trappe-settings"]')).toBeNull();
+  });
+
+  it('le bouton plein écran est à côté de l’engrenage (à sa gauche), plus à côté de quitter', async () => {
+    const mm = window.matchMedia;
+    window.matchMedia = ((q: string) => ({
+      matches: q.includes('coarse'),
+      media: q,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    HTMLElement.prototype.requestFullscreen = vi.fn().mockResolvedValue(undefined);
+    try {
+      const el = document.createElement('div');
+      const instance = await passeTrappe.mount(el, ctx());
+      const fs = el.querySelector<HTMLElement>('[data-test="game-fullscreen"]')!;
+      const gear = gearOf(el);
+      expect(fs.parentElement).toBe(gear.parentElement);
+      expect(fs.nextElementSibling).toBe(gear);
+      const exit = el.querySelector('[data-test="game-exit"]')!;
+      expect(exit.parentElement!.contains(fs)).toBe(false);
+      instance.unmount();
+      expect(el.querySelector('[data-test="game-fullscreen"]')).toBeNull();
+    } finally {
+      window.matchMedia = mm;
+      // @ts-expect-error retrait du simulacre
+      delete HTMLElement.prototype.requestFullscreen;
+    }
   });
 
   it('l’engrenage est masqué pendant le panneau, réaffiché après', async () => {
@@ -267,11 +298,12 @@ describe('réglages', () => {
     const instance = await passeTrappe.mount(el, ctx());
     mounted = el;
     const panel = openSettings();
-    expect(gearOf(el).style.display).toBe('none');
+    // Le groupe de droite (plein écran + engrenage) est masqué en entier.
+    expect(gearOf(el).parentElement!.style.display).toBe('none');
     vi.useFakeTimers();
     tapIn(panel, 'close');
     vi.advanceTimersByTime(EXIT_REVEAL_DELAY_MS);
-    expect(gearOf(el).style.display).not.toBe('none');
+    expect(gearOf(el).parentElement!.style.display).not.toBe('none');
     vi.useRealTimers();
     instance.unmount();
   });
