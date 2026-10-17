@@ -48,7 +48,6 @@ const MASK_NO_ELASTIC = CATEGORY.PUCK | CATEGORY.WALL;
 
 const drawPuck = (g: Graphics): void => {
   g.circle(0, 0, PUCK_RADIUS).fill(COLORS.puck).stroke({ width: 4, color: COLORS.puckEdge });
-  g.circle(0, 0, PUCK_RADIUS * 0.45).stroke({ width: 2, color: COLORS.puckEdge });
 };
 
 /**
