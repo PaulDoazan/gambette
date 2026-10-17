@@ -133,6 +133,45 @@ describe('mountTowerMath', () => {
     inst.unmount();
   });
 
+  it('mauvais résultat → bouton cliqué en rouge, bonne réponse en vert, puis correction', () => {
+    vi.useFakeTimers();
+    const el = document.createElement('div');
+    const inst = mountTowerMath(el, makeCtx());
+    const clicked = wrong(el);
+    clicked.click();
+    expect(clicked.dataset.state).toBe('wrong');
+    expect(good(el).dataset.state).toBe('right');
+    vi.advanceTimersByTime(1000);
+    const end = q(el, 'tower-replay').textContent;
+    expect(end).toContain('Mauvaise réponse');
+    expect(end).toContain('6 × 7 = 42');
+    inst.unmount();
+  });
+
+  it('timing raté → écran de fin « Raté », boutons non marqués', () => {
+    vi.useFakeTimers();
+    const el = document.createElement('div');
+    const inst = mountTowerMath(el, makeCtx());
+    sceneMock.currentPositionOnAxis.mockReturnValue(99);
+    good(el).click();
+    expect(buttons(el).every((b) => !b.dataset.state)).toBe(true);
+    vi.advanceTimersByTime(1000);
+    expect(q(el, 'tower-replay').textContent).toContain('Raté');
+    expect(q(el, 'tower-replay').textContent).not.toContain('Mauvaise réponse');
+    inst.unmount();
+  });
+
+  it('Rejouer efface le marquage des boutons', () => {
+    vi.useFakeTimers();
+    const el = document.createElement('div');
+    const inst = mountTowerMath(el, makeCtx());
+    wrong(el).click();
+    vi.advanceTimersByTime(1000);
+    q<HTMLButtonElement>(el, 'tower-replay-btn').click();
+    expect(buttons(el).every((b) => !b.dataset.state)).toBe(true);
+    inst.unmount();
+  });
+
   it('bon résultat mais pavé hors chevauchement (timing raté) → onGameOver', () => {
     vi.useFakeTimers();
     const el = document.createElement('div');
