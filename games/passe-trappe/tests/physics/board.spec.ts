@@ -113,3 +113,13 @@ describe('plateau planck', () => {
     });
   }
 });
+
+describe('Board — zone interdite au glisser', () => {
+  it('dessine un demi-cercle en pointillés de chaque côté du passage', () => {
+    physics = createPhysicsWorld();
+    const board = createBoard(physics);
+    for (const pl of ['A', 'B'] as const)
+      expect(board.view.getChildByLabel(`no-drag-${pl}`, true)).not.toBeNull();
+    board.destroy();
+  });
+});

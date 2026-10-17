@@ -32,6 +32,12 @@ const dividerFor = (scale: number): number =>
   Math.max(MIN_DIVIDER_THICKNESS, Math.ceil(UI_BAND_PX / scale));
 /** Épaisseur de la cloison : liaison vivante, recalculée par configureBoard selon l'échelle. */
 export let DIVIDER_THICKNESS = dividerFor(1);
+/**
+ * Zone interdite au glisser : demi-cercle de ce rayon centré sur le passage, dans chaque camp
+ * (pointillés à l'écran). Un palet tenu reste entièrement dehors : il ne peut pas pousser les
+ * autres à travers le trou.
+ */
+export const NO_DRAG_RADIUS = 180;
 /** Distance entre l'élastique et le bord du joueur. */
 export const ELASTIC_INSET = 150;
 /** Étirement maximal de l'élastique (px). */
