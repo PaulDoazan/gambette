@@ -11,7 +11,6 @@ import { createApp } from './core/App';
 import { createPhysicsWorld } from './core/PhysicsWorld';
 import { createGameScene, type GameScene } from './scenes/GameScene';
 import { createSettingsScene, type SettingsScene } from './scenes/SettingsScene';
-import { createGearButton } from './entities/GearButton';
 import { loadSettings, saveSettings, settingsChanged } from './services/Settings';
 import { createVictoryScene, type VictoryScene } from './scenes/VictoryScene';
 import { DESIGN_HEIGHT, DESIGN_WIDTH, boardHeightFor, configureBoard } from './config/dimensions';
@@ -23,12 +22,28 @@ import { DESIGN_HEIGHT, DESIGN_WIDTH, boardHeightFor, configureBoard } from './c
  */
 export const EXIT_REVEAL_DELAY_MS = 400;
 
+/**
+ * Engrenage au trait fin (Lucide « settings »), dans le style de l'icône plein écran du SDK :
+ * dessin centré dans son cadre, donc centré verticalement sur la cloison.
+ */
+const GEAR_ICON =
+  '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" ' +
+  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08' +
+  'a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74' +
+  'l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 ' +
+  '1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08' +
+  'a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74' +
+  'l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25' +
+  'a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>';
+
 export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promise<GameInstance> {
   // Plateau en pleine hauteur : sa hauteur logique suit les proportions de l'écran, fixée au
   // montage (un redimensionnement ultérieur ne fait que remettre à l'échelle).
   const w = el.clientWidth || window.innerWidth;
   const h = el.clientHeight || window.innerHeight;
-  configureBoard(boardHeightFor(w, h));
+  const boardHeight = boardHeightFor(w, h);
+  configureBoard(boardHeight, Math.min(w / DESIGN_WIDTH, h / boardHeight));
   const app = await createApp(el);
   // Tout ce qui est installé après createApp : libéré dans l'ordre inverse, au unmount comme sur échec.
   const cleanups: Array<() => void> = [() => app.destroy()];
@@ -48,13 +63,17 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
 
     // Boutons du SDK masqués pendant un écran en surimpression, réaffichés après la fin du geste.
     let revealTimer: ReturnType<typeof setTimeout> | undefined;
+    const setButtonsHidden = (hidden: boolean): void => {
+      exit.setHidden(hidden);
+      rightButtons.style.display = hidden ? 'none' : 'flex';
+    };
     const hideExit = (): void => {
       clearTimeout(revealTimer);
-      exit.setHidden(true);
+      setButtonsHidden(true);
     };
     const revealExitSoon = (): void => {
       clearTimeout(revealTimer);
-      revealTimer = setTimeout(() => exit.setHidden(false), EXIT_REVEAL_DELAY_MS);
+      revealTimer = setTimeout(() => setButtonsHidden(false), EXIT_REVEAL_DELAY_MS);
     };
 
     let settings = loadSettings();
@@ -119,8 +138,26 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
       });
       app.stage.addChild(panel.view);
     };
-    const gear = createGearButton(openSettings);
-    app.stage.addChild(gear.view);
+    // Groupe de droite sur la cloison (en miroir de « Quitter ») : plein écran puis engrenage.
+    const rightButtons = document.createElement('div');
+    rightButtons.style.cssText =
+      'position:absolute;top:50%;right:12px;transform:translateY(-50%);z-index:6;' +
+      'display:flex;align-items:center;gap:8px;';
+    // Engrenage : icône au trait fin, sans fond, dans un bouton de la hauteur de la cloison. SVG
+    // plutôt que le caractère ⚙ : centrage vertical exact, quelle que soit la police.
+    const gear = document.createElement('button');
+    gear.dataset.test = 'passe-trappe-settings';
+    gear.type = 'button';
+    gear.innerHTML = GEAR_ICON;
+    gear.setAttribute('aria-label', 'Choisir les réglages');
+    gear.title = 'Choisir les réglages';
+    gear.style.cssText =
+      'display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;' +
+      'border:none;border-radius:999px;cursor:pointer;background-color:transparent;color:#fff;';
+    gear.addEventListener('click', openSettings);
+    rightButtons.appendChild(gear);
+    el.appendChild(rightButtons);
+    cleanups.push(() => rightButtons.remove());
     cleanups.push(() => {
       closePanel();
       el.querySelector('.cp-overlay')?.remove();
@@ -149,7 +186,11 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
     cleanups.push(() => app.stage.removeAllListeners());
 
     cleanups.push(installOrientationLock(el, 'portrait'));
-    const exit = createExitButton(el, () => ctx.onExit(), { placement: 'side' });
+    const exit = createExitButton(el, () => ctx.onExit(), {
+      placement: 'side',
+      fullscreenParent: rightButtons,
+    });
+    rightButtons.appendChild(gear); // le plein écran (ajouté par le SDK) passe avant l'engrenage
     cleanups.push(() => exit.dispose());
     cleanups.push(() => clearTimeout(revealTimer));
 

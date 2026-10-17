@@ -212,15 +212,18 @@ describe('réglages', () => {
   const tapIn = (c: Container, label: string): void => {
     c.getChildByLabel(label, true)!.emit('pointertap', {} as FederatedPointerEvent);
   };
+  const gearOf = (el: HTMLElement): HTMLButtonElement =>
+    el.querySelector<HTMLButtonElement>('[data-test="passe-trappe-settings"]')!;
+  let mounted: HTMLElement;
   const openSettings = (): Container => {
-    const app = fakeApps[0]!;
-    tapIn(app.stage, 'gear');
-    return app.stage.getChildByLabel('settings', true) as Container;
+    gearOf(mounted).click();
+    return fakeApps[0]!.stage.getChildByLabel('settings', true) as Container;
   };
 
   it('engrenage → panneau : pause (pas de tick, entrées ignorées), bouton quitter masqué', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
+    mounted = el;
     const panel = openSettings();
     expect(panel).not.toBeNull();
     const scene = fakeScenes[0] as FakeScene;
@@ -237,29 +240,79 @@ describe('réglages', () => {
     instance.unmount();
   });
 
-  it('un pointerdown sur l’engrenage ne remonte pas jusqu’à la scène', async () => {
+  it('l’engrenage reprend le bouton de Tour de calcul, sur la cloison à droite', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
-    const stage = fakeApps[0]!.stage;
-    const scene = fakeScenes[0] as FakeScene;
-    // Simule la remontée de Pixi : sans stopPropagation, le stage reçoit l'événement.
-    const e = {
-      pointerId: 1,
-      getLocalPosition: () => ({ x: 590, y: 640 }),
-      stopped: false,
-      stopPropagation() {
-        this.stopped = true;
-      },
-    };
-    stage.getChildByLabel('gear', true)!.emit('pointerdown', e as unknown as FederatedPointerEvent);
-    if (!e.stopped) stage.emit('pointerdown', e as unknown as FederatedPointerEvent);
-    expect(scene.drag.pointerDown).not.toHaveBeenCalled();
+    const gear = gearOf(el);
+    expect(gear.tagName).toBe('BUTTON');
+    expect(gear.getAttribute('aria-label')).toBe('Choisir les réglages');
+    expect(gear.style.width).toBe('40px');
+    expect(gear.style.height).toBe('40px');
+    expect(gear.style.borderRadius).toBe('999px');
+    // Icône SVG (pas un caractère : centrage exact, sans dépendre de la police) au trait fin,
+    // comme le symbole ⚙ d'origine, dans un bouton de la hauteur de la cloison, sans fond.
+    const svg = gear.querySelector('svg')!;
+    expect(svg.getAttribute('fill')).toBe('none');
+    expect(svg.getAttribute('stroke-width')).toBe('2');
+    expect(Number(svg.getAttribute('width'))).toBeLessThanOrEqual(30);
+    expect(gear.style.height).toBe('40px');
+    expect(gear.style.display).toBe('flex');
+    expect(gear.style.alignItems).toBe('center');
+    expect(gear.style.justifyContent).toBe('center');
+    expect(gear.style.borderStyle).toBe('none');
+    expect(gear.style.backgroundColor).toBe('transparent');
+    // Plus d'engrenage dessiné dans la scène (le toucher ne peut plus atteindre le tir).
+    expect(fakeApps[0]!.stage.getChildByLabel('gear', true)).toBeNull();
+    instance.unmount();
+    expect(el.querySelector('[data-test="passe-trappe-settings"]')).toBeNull();
+  });
+
+  it('le bouton plein écran est à côté de l’engrenage (à sa gauche), plus à côté de quitter', async () => {
+    const mm = window.matchMedia;
+    window.matchMedia = ((q: string) => ({
+      matches: q.includes('coarse'),
+      media: q,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    HTMLElement.prototype.requestFullscreen = vi.fn().mockResolvedValue(undefined);
+    try {
+      const el = document.createElement('div');
+      const instance = await passeTrappe.mount(el, ctx());
+      const fs = el.querySelector<HTMLElement>('[data-test="game-fullscreen"]')!;
+      const gear = gearOf(el);
+      expect(fs.parentElement).toBe(gear.parentElement);
+      expect(fs.nextElementSibling).toBe(gear);
+      const exit = el.querySelector('[data-test="game-exit"]')!;
+      expect(exit.parentElement!.contains(fs)).toBe(false);
+      instance.unmount();
+      expect(el.querySelector('[data-test="game-fullscreen"]')).toBeNull();
+    } finally {
+      window.matchMedia = mm;
+      // @ts-expect-error retrait du simulacre
+      delete HTMLElement.prototype.requestFullscreen;
+    }
+  });
+
+  it('l’engrenage est masqué pendant le panneau, réaffiché après', async () => {
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    mounted = el;
+    const panel = openSettings();
+    // Le groupe de droite (plein écran + engrenage) est masqué en entier.
+    expect(gearOf(el).parentElement!.style.display).toBe('none');
+    vi.useFakeTimers();
+    tapIn(panel, 'close');
+    vi.advanceTimersByTime(EXIT_REVEAL_DELAY_MS);
+    expect(gearOf(el).parentElement!.style.display).not.toBe('none');
+    vi.useRealTimers();
     instance.unmount();
   });
 
   it('fermer sans changement → même partie ; avec changement → nouvelle partie', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
+    mounted = el;
     let panel = openSettings();
     vi.useFakeTimers();
     tapIn(panel, 'close');
@@ -287,6 +340,7 @@ describe('réglages', () => {
   it('démonter avec le panneau ouvert ne lève pas ; la scène est détruite avant la physique', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
+    mounted = el;
     openSettings();
     expect(() => instance.unmount()).not.toThrow();
     expect((fakeScenes[0] as FakeScene).destroy).toHaveBeenCalledTimes(1);
@@ -304,6 +358,8 @@ describe('hauteur du plateau', () => {
     const instance = await passeTrappe.mount(el, ctx());
     expect(dims.DESIGN_HEIGHT).toBe(dims.boardHeightFor(390, 844));
     expect(dims.DESIGN_HEIGHT).toBeGreaterThan(1280);
+    // Cloison assez épaisse à l'échelle de cet écran pour couvrir les boutons.
+    expect(dims.DIVIDER_THICKNESS * (390 / 720)).toBeGreaterThanOrEqual(dims.UI_BAND_PX);
     instance.unmount();
     dims.configureBoard(1280);
   });

@@ -10,12 +10,24 @@ import {
   PUCK_RESTITUTION,
 } from '../config/physics';
 import { COLORS } from '../config/theme';
+import {
+  BURST_MS,
+  circleSparkOrigin,
+  burstFrame,
+  drawRays,
+  drawSparks,
+  makeSparks,
+  mixColor,
+  type Spark,
+} from './Burst';
 import { FLIP_LIFT, FLIP_MS, FLIP_TURNS } from '../config/physics';
 import { campOf } from '../domain/rules';
 import type { Vec } from '../domain/types';
 
 export interface Puck {
   readonly view: Container;
+  /** Étincelles de l'éclat : à placer dans un calque au-dessus de tous les palets. */
+  readonly sparks: Graphics;
   readonly body: Body;
   position(): Vec;
   /** px/s */
@@ -35,6 +47,12 @@ export interface Puck {
   flip(from: Vec): void;
   isFlipping(): boolean;
   /**
+   * Éclat (nouvelle valeur) : le fond passe au jaune puis revient au vert en fondu, le chiffre
+   * gonfle, rayons et étincelles autour ; avance avec syncView.
+   */
+  flash(): void;
+  isFlashing(): boolean;
+  /**
    * Met la vue à jour : position, rotation, étiquette droite pour le joueur du camp ; fait
    * avancer le retournement de `dtMs`.
    */
@@ -43,12 +61,17 @@ export interface Puck {
 }
 
 const PUCK_TAG: FixtureTag = { kind: 'puck' };
+/** Étincelles qui jaillissent du palet quand son chiffre change. */
+const PUCK_SPARKS = 14;
 const MASK_ALL = CATEGORY.PUCK | CATEGORY.WALL | CATEGORY.ELASTIC;
 const MASK_NO_ELASTIC = CATEGORY.PUCK | CATEGORY.WALL;
 
-const drawPuck = (g: Graphics): void => {
-  g.circle(0, 0, PUCK_RADIUS).fill(COLORS.puck).stroke({ width: 4, color: COLORS.puckEdge });
-  g.circle(0, 0, PUCK_RADIUS * 0.45).stroke({ width: 2, color: COLORS.puckEdge });
+/** Disque blanc teinté (sa couleur s'anime pendant l'éclat), puis contour par-dessus. */
+const drawDisc = (g: Graphics): void => {
+  g.circle(0, 0, PUCK_RADIUS).fill(0xffffff);
+};
+const drawRim = (g: Graphics): void => {
+  g.circle(0, 0, PUCK_RADIUS).stroke({ width: 4, color: COLORS.puckEdge });
 };
 
 /**
@@ -88,9 +111,13 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   // Face : disque et étiquette, écrasée puis inversée quand le palet tourne comme une pièce.
   const face = new Container();
   face.label = 'face';
-  const g = new Graphics();
-  drawPuck(g);
-  face.addChild(g);
+  const disc = new Graphics();
+  disc.label = 'disc';
+  drawDisc(disc);
+  disc.tint = COLORS.puck;
+  const rim = new Graphics();
+  drawRim(rim);
+  face.addChild(disc, rim);
   view.addChild(edge, face);
   const text = new Text({
     text: '',
@@ -104,6 +131,18 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   text.label = 'value';
   text.anchor.set(0.5);
   face.addChild(text);
+  // Éclat (rayons) au-dessus de la face, caché hors éclat.
+  const burst = new Graphics();
+  burst.label = 'burst';
+  burst.visible = false;
+  view.addChild(burst);
+  // Hors de la vue : le calque d'effets de la scène les affiche au-dessus des autres palets.
+  const sparksView = new Graphics();
+  sparksView.label = 'sparks';
+  sparksView.visible = false;
+  const sparkOrigin = circleSparkOrigin(PUCK_RADIUS);
+  let sparks: Spark[] = [];
+  let flashElapsed: number | null = null;
   let ignoring = false;
   let value: number | null = null;
   let flipFrom: Vec | null = null;
@@ -111,6 +150,7 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
 
   const api: Puck = {
     view,
+    sparks: sparksView,
     body,
     position: () => {
       const p = body.getPosition();
@@ -147,6 +187,11 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
       flipElapsed = 0;
     },
     isFlipping: () => flipFrom !== null,
+    flash: () => {
+      flashElapsed = 0;
+      sparks = makeSparks(PUCK_SPARKS);
+    },
+    isFlashing: () => flashElapsed !== null,
     syncView: (dtMs = 0) => {
       const p = api.position();
       if (flipFrom) {
@@ -174,6 +219,22 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
         face.scale.y = 1;
         edge.visible = false;
       }
+      if (flashElapsed !== null) {
+        flashElapsed += dtMs;
+        const f = burstFrame(flashElapsed / BURST_MS);
+        if (flashElapsed >= BURST_MS) flashElapsed = null;
+        text.scale.set(f.scale);
+        // Le fond vert passe au jaune puis revient au vert en fondu ; le chiffre, lui, passe au
+        // navy pour rester lisible sur le jaune.
+        disc.tint = mixColor(COLORS.puck, COLORS.button, f.glow);
+        text.tint = mixColor(0xffffff, COLORS.buttonText, f.glow);
+        burst.visible = flashElapsed !== null;
+        if (burst.visible) drawRays(burst, PUCK_RADIUS + 6, PUCK_RADIUS + 34, f);
+        sparksView.visible = burst.visible;
+        if (sparksView.visible)
+          drawSparks(sparksView, sparks, (flashElapsed ?? BURST_MS) / BURST_MS, sparkOrigin, 90);
+      }
+      sparksView.position.set(view.position.x, view.position.y);
       const angle = body.getAngle();
       view.rotation = angle;
       // Étiquette droite pour le joueur du camp où se trouve le palet.
@@ -181,6 +242,7 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
     },
     destroy: () => {
       physics.world.destroyBody(body);
+      sparksView.destroy();
       view.destroy({ children: true });
     },
   };

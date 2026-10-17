@@ -93,6 +93,19 @@ describe('mountTowerMath', () => {
     inst.unmount();
   });
 
+  it('les 5 résultats sont dans une colonne calée juste sous le calcul', () => {
+    const el = document.createElement('div');
+    const inst = mountTowerMath(el, makeCtx());
+    const column = q(el, 'tower-choices');
+    expect(column.previousElementSibling).toBe(q(el, 'tower-calc'));
+    expect(column.children).toHaveLength(5);
+    expect(column.style.justifyContent).toBe('flex-start');
+    // Même écart entre le cadre et le 1er bouton qu'entre deux boutons.
+    expect(q(el, 'tower-quiz').style.gap).toBe(column.style.gap);
+    expect(column.style.paddingTop).toBe('');
+    inst.unmount();
+  });
+
   it("répond dès l'appui (pointerdown), sans attendre le relâcher", () => {
     const el = document.createElement('div');
     const inst = mountTowerMath(el, makeCtx());

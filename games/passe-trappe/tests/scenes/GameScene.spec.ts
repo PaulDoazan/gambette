@@ -11,7 +11,9 @@ import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
 import {
   CALC_BLOCK,
   CALC_BLOCK_SIZE,
+  DESIGN_WIDTH,
   DIVIDER_THICKNESS,
+  GAP_WIDTH,
   MID_Y,
   PUCK_RADIUS as R,
 } from '../../src/config/dimensions';
@@ -173,6 +175,56 @@ describe('initialPuckPositions', () => {
       }
     });
   }
+});
+
+describe('initialPuckPositions — couloir du milieu dégagé', () => {
+  // Couloir de tir : la largeur du trou, dans l'axe du trou (centre du plateau).
+  const outsideCorridor = (p: { x: number }) =>
+    Math.abs(p.x - DESIGN_WIDTH / 2) - R >= GAP_WIDTH / 2;
+
+  for (let count = 5; count <= 10; count++) {
+    it(`${count} palets : sur les côtés, aucun dans l'axe du trou (grille et tirages)`, () => {
+      for (const pl of ['A', 'B'] as const) {
+        expect(initialPuckPositions(pl, count).every(outsideCorridor)).toBe(true);
+        for (let seed = 1; seed <= 20; seed++)
+          expect(scatteredPuckPositions(pl, count, mulberry32(seed)).every(outsideCorridor)).toBe(
+            true,
+          );
+      }
+    });
+
+    it(`${count} palets : répartis des deux côtés du couloir`, () => {
+      for (const pl of ['A', 'B'] as const) {
+        const pos = initialPuckPositions(pl, count);
+        const left = pos.filter((p) => p.x < DESIGN_WIDTH / 2).length;
+        expect(Math.abs(left - (count - left))).toBeLessThanOrEqual(1);
+      }
+    });
+
+    it(`${count} palets : posés bas, contre l'élastique`, () => {
+      for (const pl of ['A', 'B'] as const) {
+        const line = elasticLine(pl).y;
+        const pos = initialPuckPositions(pl, count);
+        // La rangée du bas touche presque l'élastique…
+        const nearest = Math.min(...pos.map((p) => Math.abs(line - p.y)));
+        expect(nearest).toBeLessThanOrEqual(2 * R);
+        // … et jusqu'à 8 palets, tous sont plus près de l'élastique que de la cloison.
+        if (count <= 8)
+          for (const p of pos) expect(Math.abs(line - p.y)).toBeLessThan(Math.abs(p.y - MID_Y));
+      }
+    });
+  }
+
+  it('le joueur du haut a la même disposition, en miroir', () => {
+    const a = initialPuckPositions('A', 5);
+    const b = initialPuckPositions('B', 5);
+    a.forEach((p, i) => {
+      expect(b[i]!.x).toBeCloseTo(DESIGN_WIDTH - p.x);
+      expect(Math.abs(b[i]!.y - elasticLine('B').y)).toBeCloseTo(
+        Math.abs(p.y - elasticLine('A').y),
+      );
+    });
+  });
 });
 
 describe('initialPuckPositions — bloc de calcul', () => {
@@ -394,6 +446,16 @@ describe('GameScene — calcul', () => {
     expect(scene.calc('A')).not.toEqual(before.A);
     expect(scene.calc('B')).toEqual(before.B);
     for (const [puck, label] of labelsB) expect(puck.label()).toBe(label);
+    // Éclat : tous les palets du camp A (nouveaux chiffres) et son calcul ; rien côté B.
+    for (const p of scene.pucks().filter((q) => campOf(q.position().y) === 'A'))
+      expect(p.isFlashing()).toBe(true);
+    for (const [puck] of labelsB) expect(puck.isFlashing()).toBe(false);
+    expect(scene.view.getChildByLabel('calc-A', true)!.scale.x).toBeGreaterThan(1);
+    expect(scene.view.getChildByLabel('calc-B', true)!.scale.x).toBe(1);
+    // Les étincelles sont dans un calque au-dessus de tout (palets compris).
+    const effects = scene.view.getChildByLabel('effects')!;
+    expect(scene.view.children.at(-1)).toBe(effects);
+    for (const p of scene.pucks()) expect(effects.children).toContain(p.sparks);
     expect(correctPerCamp(scene)).toEqual({ A: 1, B: 1 });
     expect(scene.isCorrect(mover)).toBe(false);
     const valsB = scene
@@ -402,6 +464,21 @@ describe('GameScene — calcul', () => {
       .map((p) => p.label());
     expect(new Set(valsB).size).toBe(valsB.length);
     expect(valsB).toHaveLength(6);
+    scene.destroy();
+  });
+
+  it('au départ et à Rejouer : pas d’éclat (seul un changement en cours de partie en déclenche)', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(2),
+      onWin: vi.fn(),
+    });
+    expect(scene.pucks().some((p) => p.isFlashing())).toBe(false);
+    scene.reset();
+    expect(scene.pucks().some((p) => p.isFlashing())).toBe(false);
     scene.destroy();
   });
 
