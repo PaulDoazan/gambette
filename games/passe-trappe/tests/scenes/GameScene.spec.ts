@@ -11,7 +11,9 @@ import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
 import {
   CALC_BLOCK,
   CALC_BLOCK_SIZE,
+  DESIGN_WIDTH,
   DIVIDER_THICKNESS,
+  GAP_WIDTH,
   MID_Y,
   PUCK_RADIUS as R,
 } from '../../src/config/dimensions';
@@ -173,6 +175,56 @@ describe('initialPuckPositions', () => {
       }
     });
   }
+});
+
+describe('initialPuckPositions — couloir du milieu dégagé', () => {
+  // Couloir de tir : la largeur du trou, dans l'axe du trou (centre du plateau).
+  const outsideCorridor = (p: { x: number }) =>
+    Math.abs(p.x - DESIGN_WIDTH / 2) - R >= GAP_WIDTH / 2;
+
+  for (let count = 5; count <= 10; count++) {
+    it(`${count} palets : sur les côtés, aucun dans l'axe du trou (grille et tirages)`, () => {
+      for (const pl of ['A', 'B'] as const) {
+        expect(initialPuckPositions(pl, count).every(outsideCorridor)).toBe(true);
+        for (let seed = 1; seed <= 20; seed++)
+          expect(scatteredPuckPositions(pl, count, mulberry32(seed)).every(outsideCorridor)).toBe(
+            true,
+          );
+      }
+    });
+
+    it(`${count} palets : répartis des deux côtés du couloir`, () => {
+      for (const pl of ['A', 'B'] as const) {
+        const pos = initialPuckPositions(pl, count);
+        const left = pos.filter((p) => p.x < DESIGN_WIDTH / 2).length;
+        expect(Math.abs(left - (count - left))).toBeLessThanOrEqual(1);
+      }
+    });
+
+    it(`${count} palets : posés bas, contre l'élastique`, () => {
+      for (const pl of ['A', 'B'] as const) {
+        const line = elasticLine(pl).y;
+        const pos = initialPuckPositions(pl, count);
+        // La rangée du bas touche presque l'élastique…
+        const nearest = Math.min(...pos.map((p) => Math.abs(line - p.y)));
+        expect(nearest).toBeLessThanOrEqual(2 * R);
+        // … et jusqu'à 8 palets, tous sont plus près de l'élastique que de la cloison.
+        if (count <= 8)
+          for (const p of pos) expect(Math.abs(line - p.y)).toBeLessThan(Math.abs(p.y - MID_Y));
+      }
+    });
+  }
+
+  it('le joueur du haut a la même disposition, en miroir', () => {
+    const a = initialPuckPositions('A', 5);
+    const b = initialPuckPositions('B', 5);
+    a.forEach((p, i) => {
+      expect(b[i]!.x).toBeCloseTo(DESIGN_WIDTH - p.x);
+      expect(Math.abs(b[i]!.y - elasticLine('B').y)).toBeCloseTo(
+        Math.abs(p.y - elasticLine('A').y),
+      );
+    });
+  });
 });
 
 describe('initialPuckPositions — bloc de calcul', () => {

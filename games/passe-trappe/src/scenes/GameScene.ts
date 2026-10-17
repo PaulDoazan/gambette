@@ -11,6 +11,7 @@ import {
   CALC_BLOCK_SIZE,
   DESIGN_WIDTH,
   DIVIDER_THICKNESS,
+  GAP_WIDTH,
   MID_Y,
   PUCK_RADIUS,
   PUCK_SPACING,
@@ -33,33 +34,36 @@ export interface GameScene {
   destroy(): void;
 }
 
+/** Couloir de tir laissé libre au milieu : la largeur du trou, dans son axe. */
+const CORRIDOR_HALF = GAP_WIDTH / 2;
+/** Disposition de départ : marges (px) au bord du plateau et devant l'élastique, pas de la grille. */
+const START = { side: 16, elastic: 24, step: 2 * PUCK_RADIUS + 3 * PUCK_SPACING } as const;
+
 /**
- * Disposition de départ. Jusqu'à 5 palets : une rangée à mi-chemin entre la cloison et
- * l'élastique. Au-delà : deux rangées (ceil(n/2) côté cloison, floor(n/2) côté élastique),
- * la seconde décalée d'un demi-pas si les deux rangées ont le même nombre de palets.
- * La rangée avant est posée juste derrière le bloc de calcul du camp : aucun palet ne le recouvre.
+ * Disposition de départ : deux groupes sur les côtés, de part et d'autre du couloir du trou,
+ * posés contre l'élastique. Chaque groupe a 2 colonnes (bord, puis vers le couloir) et se remplit
+ * rangée par rangée depuis l'élastique vers la cloison. Côté gauche du joueur : ceil(n/2) palets ;
+ * le joueur B (tourné de 180°) a la même disposition, en miroir.
  */
 export function initialPuckPositions(player: Player, count: number): Vec[] {
   const lineY = elasticLine(player).y;
-  const toward = player === 'A' ? 1 : -1; // de la cloison vers l'élastique
-  const row = (n: number, y: number, shift = 0): Vec[] => {
-    const step = DESIGN_WIDTH / (n + 1);
-    return Array.from({ length: n }, (_, i) => ({ x: step * (i + 1) + shift, y }));
-  };
-  if (count <= 5) return row(count, (MID_Y + lineY) / 2);
-  const front =
-    MID_Y + toward * (DIVIDER_THICKNESS / 2 + 24 + CALC_BLOCK_SIZE.h + PUCK_RADIUS + PUCK_SPACING);
-  const back = front + toward * (2 * PUCK_RADIUS + PUCK_SPACING);
-  const n1 = Math.ceil(count / 2);
-  const n2 = count - n1;
-  const shift = n1 === n2 ? DESIGN_WIDTH / (n2 + 1) / 2 - PUCK_RADIUS / 2 : 0;
-  return [...row(n1, front), ...row(n2, back, shift)];
+  const toward = player === 'A' ? -1 : 1; // de l'élastique vers la cloison
+  const columns = [START.side + PUCK_RADIUS, START.side + PUCK_RADIUS + START.step] as const;
+  const group = (n: number): Vec[] =>
+    Array.from({ length: n }, (_, i) => ({
+      x: columns[i % 2]!,
+      y: lineY + toward * (PUCK_RADIUS + START.elastic + Math.floor(i / 2) * START.step),
+    }));
+  const left = group(Math.ceil(count / 2));
+  const right = group(Math.floor(count / 2)).map((p) => ({ ...p, x: DESIGN_WIDTH - p.x }));
+  const pos = [...left, ...right];
+  return player === 'A' ? pos : pos.map((p) => ({ ...p, x: DESIGN_WIDTH - p.x }));
 }
 
 /** Désordre initial : décalage aléatoire maximal (px) autour de la grille, et marge de sécurité. */
 const SCATTER = { x: 22, y: 40, tries: 25, margin: 4 } as const;
 
-/** Position valide pour un palet de `player` au départ : dans son camp, devant l'élastique, hors du bloc. */
+/** Position valide pour un palet de `player` au départ : dans son camp, devant l'élastique, hors du bloc et du couloir. */
 const validStart = (p: Vec, player: Player): boolean => {
   const R = PUCK_RADIUS + SCATTER.margin;
   if (p.x - R < 0 || p.x + R > DESIGN_WIDTH) return false;
@@ -70,6 +74,7 @@ const validStart = (p: Vec, player: Player): boolean => {
       ? p.y - R > MID_Y + divider && p.y + R < line
       : p.y + R < MID_Y - divider && p.y - R > line;
   if (!inCamp) return false;
+  if (Math.abs(p.x - DESIGN_WIDTH / 2) - PUCK_RADIUS < CORRIDOR_HALF) return false;
   const c = CALC_BLOCK[player];
   const dx = Math.max(Math.abs(p.x - c.x) - CALC_BLOCK_SIZE.w / 2, 0);
   const dy = Math.max(Math.abs(p.y - c.y) - CALC_BLOCK_SIZE.h / 2, 0);
