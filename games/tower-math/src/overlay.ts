@@ -52,24 +52,35 @@ export function createOverlay(
     'font:400 22px system-ui,sans-serif;background:rgba(255,255,255,0.12);color:#fff;';
   settings.addEventListener('click', () => handlers.onSettings());
 
-  // Panneau quiz (haut-droite) : le calcul, puis les 5 résultats dessous.
+  // Panneau quiz (bord droit, toute la hauteur) : le calcul en haut, puis les
+  // 5 résultats centrés verticalement dans la hauteur restante.
   const quizPanel = document.createElement('div');
   quizPanel.dataset.test = 'tower-quiz';
   quizPanel.style.cssText =
-    'position:absolute;top:16px;right:16px;z-index:5;display:flex;' +
-    'flex-direction:column;gap:6px;align-items:stretch;width:min(220px,40vw);';
+    'position:absolute;top:16px;bottom:16px;right:16px;z-index:5;display:flex;' +
+    'flex-direction:column;gap:6px;align-items:stretch;width:min(220px,40vw);' +
+    'pointer-events:none;';
 
   const calc = document.createElement('div');
   calc.dataset.test = 'tower-calc';
   calc.style.cssText =
     'padding:10px 8px;border-radius:12px;text-align:center;' +
     'font:800 30px system-ui,sans-serif;color:#fff;' +
-    'background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.5);';
+    'background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.5);' +
+    'pointer-events:auto;';
 
-  // Boutons compacts : 5 doivent tenir en paysage sur téléphone (~360 px de haut).
+  const choices = document.createElement('div');
+  choices.dataset.test = 'tower-choices';
+  choices.style.cssText =
+    'flex-grow:1;display:flex;flex-direction:column;justify-content:center;' +
+    'align-items:center;gap:clamp(6px,3.5vh,24px);min-height:0;';
+
+  // Boutons étroits et hauts (hauteur et espacement suivent l'écran) : les 5
+  // tiennent en paysage sur téléphone (~360 px de haut).
   const CHOICE_CSS =
-    'padding:6px 18px;border:none;border-radius:8px;cursor:pointer;' +
-    'font:700 17px system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;' +
+    'width:min(130px,70%);height:clamp(32px,10vh,64px);padding:0 12px;flex-shrink:0;' +
+    'border:none;border-radius:10px;cursor:pointer;pointer-events:auto;' +
+    'font:700 20px system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;' +
     'transition:background-color 120ms,color 120ms;';
   const buttons: HTMLButtonElement[] = [];
   for (let slot = 0; slot < CHOICES_COUNT; slot++) {
@@ -88,7 +99,8 @@ export function createOverlay(
     });
     buttons.push(btn);
   }
-  quizPanel.append(calc, ...buttons);
+  choices.append(...buttons);
+  quizPanel.append(calc, choices);
 
   const gameOver = document.createElement('div');
   gameOver.dataset.test = 'tower-replay';
