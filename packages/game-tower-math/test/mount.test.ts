@@ -5,7 +5,7 @@ import type { Pair } from '@gambette/math-sdk';
 const sceneMock = {
   reset: vi.fn(),
   currentPositionOnAxis: vi.fn(() => 0),
-  texturePlacedTop: vi.fn(),
+  texturePlacedFace: vi.fn(),
   applyCut: vi.fn(),
   dropCurrent: vi.fn(),
   tick: vi.fn(),
@@ -86,7 +86,7 @@ describe('mountTowerMath', () => {
     const inst = mountTowerMath(el, ctx);
     good(el).click();
     expect(sceneMock.applyCut).toHaveBeenCalledTimes(1);
-    expect(sceneMock.texturePlacedTop).toHaveBeenCalledWith('6 × 7 = 42');
+    expect(sceneMock.texturePlacedFace).toHaveBeenCalledWith('6 × 7 = 42');
     expect(ctx.onScore).toHaveBeenCalledWith(1);
     expect(q(el, 'tower-score').textContent).toBe('Score : 1');
     expect(buttons(el).map((b) => b.textContent)).toContain('42');

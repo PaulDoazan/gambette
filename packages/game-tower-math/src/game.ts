@@ -95,7 +95,7 @@ export function mountTowerMath(el: HTMLElement, ctx: GameContext): GameInstance 
     }
 
     scene.applyCut(result.cut);
-    scene.texturePlacedTop(formatSolved(question)); // le calcul résolu tamponne l'étage posé
+    scene.texturePlacedFace(formatSolved(question)); // le calcul résolu tamponne la face de l'étage posé
     ctx.onScore?.(engine.score);
     overlay.setScore(engine.score);
     nextQuiz();

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import type { Layer, SliceCut } from './engine';
 import { stepBounce } from './motion';
-import { createCalcTexture, createLabelCache } from './calcTexture';
+import { createCalcTexture, pickLabelFace } from './calcTexture';
 
 // Constantes portées de threejs-tower-slice.
 const BOX_HEIGHT = 1;
@@ -21,9 +21,6 @@ const BODY_MASS = 5; // l'original donne mass 5 à tous les pavés (falls=true c
 const PRUNE_Y = -30; // sous ce niveau, chute/fantôme libéré (mémoire bornée, spec §5)
 const MIN_OVERHANG = 1e-4; // découpe parfaite → pas de chute dégénérée
 
-// Faces d'un BoxGeometry : [+x, -x, +y, -y, +z, -z] → calcul sur la face du dessus (+y).
-const LABEL_FACES = [2];
-
 // Palette de marque (thème Vuetify apps/web) : fond Oxford Blue, cubes en
 // Coral Reef / Violets Are Blue / Cheerful Yellow alternés par étage.
 const BACKGROUND_COLOR = '#00274B'; // Oxford Blue
@@ -37,12 +34,13 @@ interface SceneBox {
   mesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshLambertMaterial[]>;
   body: CANNON.Body;
   direction: 'x' | 'z';
+  label?: THREE.Texture; // calcul résolu, propre au pavé (proportions de sa face)
 }
 
 export interface TowerScene {
   reset(foundation: Layer, first: Layer): void;
   currentPositionOnAxis(): number; // position live du pavé mobile sur son axe
-  texturePlacedTop(label: string): void; // calcul résolu sur le dessus du dernier pavé posé
+  texturePlacedFace(label: string): void; // calcul résolu sur la plus grande face latérale visible du dernier pavé posé
   applyCut(cut: SliceCut): void; // scale + recentrage + chute physique + pavé suivant
   dropCurrent(): void; // raté / mauvais bouton : le pavé courant chute
   tick(): void; // déplacement, montée caméra, physique, rendu
@@ -86,9 +84,6 @@ export function createScene(canvas: HTMLCanvasElement): TowerScene {
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(width, height, false);
 
-  // Textures des calculs résolus, partagées entre étages (même calcul → même texture).
-  const textures = createLabelCache(createCalcTexture);
-
   const stack: SceneBox[] = []; // fondation + étages posés + pavé mobile (dernier)
   const overhangs: SceneBox[] = []; // chutes visibles synchronisées depuis la physique
   const ghosts: CANNON.Body[] = []; // bodies des étages posés (port : ils chutent invisiblement)
@@ -123,8 +118,7 @@ export function createScene(canvas: HTMLCanvasElement): TowerScene {
     scene.remove(box.mesh);
     box.mesh.geometry.dispose();
     box.mesh.material.forEach((m) => m.dispose());
-    // Les textures appartiennent au cache (partagées entre étages) : libérées
-    // une seule fois dans dispose(), pas par pavé.
+    box.label?.dispose();
     world.removeBody(box.body);
   }
 
@@ -153,20 +147,25 @@ export function createScene(canvas: HTMLCanvasElement): TowerScene {
       return t.direction === 'x' ? t.mesh.position.x : t.mesh.position.z;
     },
 
-    texturePlacedTop(label: string): void {
+    texturePlacedFace(label: string): void {
       if (disposed) return;
       // Cible le dernier pavé POSÉ (sous le pavé mobile) : le calcul résolu vient
-      // « tamponner » l'étage qu'on vient d'empiler. La couleur du pavé est gardée
-      // (multipliée par le fond blanc de la texture).
+      // « tamponner » l'étage qu'on vient d'empiler, sur sa plus grande face
+      // latérale visible. La couleur du pavé est gardée (multipliée par le fond
+      // blanc de la texture).
       const placed = stack[stack.length - 2];
       if (!placed) return;
-      const tex = textures.get(label);
-      LABEL_FACES.forEach((i) => {
-        const material = placed.mesh.material[i];
-        if (!material) return;
-        material.map = tex;
-        material.needsUpdate = true;
-      });
+      const { parameters } = placed.mesh.geometry;
+      const face = pickLabelFace(
+        parameters.width * placed.mesh.scale.x,
+        parameters.depth * placed.mesh.scale.z,
+      );
+      const material = placed.mesh.material[face.index];
+      if (!material) return;
+      placed.label?.dispose();
+      placed.label = createCalcTexture(label, face.length / BOX_HEIGHT);
+      material.map = placed.label;
+      material.needsUpdate = true;
     },
 
     applyCut(cut: SliceCut): void {
@@ -295,7 +294,6 @@ export function createScene(canvas: HTMLCanvasElement): TowerScene {
       overhangs.length = 0;
       ghosts.forEach((b) => world.removeBody(b));
       ghosts.length = 0;
-      textures.dispose();
       // dispose() seul ne rend pas le contexte GL : sans ça, chaque partie en
       // laisse un actif jusqu'au GC (limite ~16 contextes, Safari mobile serré).
       renderer.forceContextLoss();
