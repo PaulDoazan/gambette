@@ -72,3 +72,19 @@ describe('generateDistractors determinism', () => {
     expect(a).toEqual(b);
   });
 });
+
+describe('generateDistractors petites réponses (soustractions ≤ 1)', () => {
+  // Sans distracteur plus petit, la réponse serait la seule valeur < 2 (ou la
+  // seule négative) : trouvable par élimination, sans calculer.
+  it.each([-6, 0, 1])('réponse %i : au moins un distracteur plus petit', (answer) => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const ds = generateDistractors(answer, 'medium', 4, mulberry32(seed));
+      expect(ds).toHaveLength(4);
+      expect(ds.some((d) => d < answer)).toBe(true);
+      for (const d of distancesFrom(answer, ds)) {
+        expect(d).toBeGreaterThanOrEqual(3);
+        expect(d).toBeLessThanOrEqual(9);
+      }
+    }
+  });
+});

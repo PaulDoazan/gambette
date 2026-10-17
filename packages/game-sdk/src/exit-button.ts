@@ -36,8 +36,9 @@ function fullscreenAvailable(el: FsElement): boolean {
  * Bouton « ✕ Quitter » commun aux jeux (tout en haut, centré) : un clic le
  * remplace par une confirmation (« Quitter la partie ? » + Annuler / Quitter)
  * pour éviter les sorties accidentelles. `onExit` n'est appelé qu'à la
- * confirmation. Sur mobile (et si l'API Fullscreen est disponible), un bouton
- * plein écran apparaît juste à côté et bascule l'affichage du jeu.
+ * confirmation. Si l'API Fullscreen est disponible, un bouton plein écran
+ * apparaît juste à côté et bascule l'affichage du jeu : sur mobile seulement
+ * par défaut, sur tout appareil avec `opts.fullscreen: 'always'`.
  * `opts.fullscreen: false` désactive ce bouton (jeu qui fournit le sien).
  * `opts.placement: 'side'` place le bouton sur le bord gauche, centré
  * verticalement (jeux dont le haut d'écran est une zone de jeu).
@@ -45,7 +46,7 @@ function fullscreenAvailable(el: FsElement): boolean {
 export function createExitButton(
   parent: HTMLElement,
   onExit: () => void,
-  opts: { fullscreen?: boolean; placement?: 'top' | 'side' } = {},
+  opts: { fullscreen?: boolean | 'always'; placement?: 'top' | 'side' } = {},
 ): ExitButton {
   const wrap = document.createElement('div');
   const position =
@@ -95,13 +96,16 @@ export function createExitButton(
   cancel.addEventListener('click', () => setConfirm(false));
   go.addEventListener('click', () => onExit());
 
-  // Bouton plein écran : mobile uniquement, et seulement si l'API est dispo.
+  // Bouton plein écran : mobile uniquement par défaut (partout avec 'always'),
+  // et seulement si l'API est dispo.
   // On cible la racine du document (et non le conteneur du jeu) : ainsi le plein
   // écran PERSISTE quand le jeu est démonté (retour au briefing et
   // aux autres écrans de l'app), au lieu d'être annulé avec son élément.
   let detachFullscreen: (() => void) | null = null;
   const target = document.documentElement as FsElement;
-  if ((opts.fullscreen ?? true) && isMobile() && fullscreenAvailable(target)) {
+  const mode = opts.fullscreen ?? true;
+  const wanted = mode === 'always' || (mode === true && isMobile());
+  if (wanted && fullscreenAvailable(target)) {
     const doc = document as FsDocument;
     const fsBtn = document.createElement('button');
     fsBtn.dataset.test = 'game-fullscreen';

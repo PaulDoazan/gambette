@@ -102,6 +102,24 @@ describe('createExitButton — option fullscreen', () => {
     expect(parent.querySelector(fsSelector)).toBeNull();
     btn.dispose();
   });
+
+  it("affiche le bouton sur desktop quand fullscreen: 'always'", () => {
+    setPointer(false);
+    setFullscreenApi(true);
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {}, { fullscreen: 'always' });
+    expect(parent.querySelector(fsSelector)).not.toBeNull();
+    btn.dispose();
+  });
+
+  it("n'affiche pas le bouton avec fullscreen: 'always' si l'API est absente", () => {
+    setPointer(false);
+    setFullscreenApi(false);
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {}, { fullscreen: 'always' });
+    expect(parent.querySelector(fsSelector)).toBeNull();
+    btn.dispose();
+  });
 });
 
 describe('createExitButton — placement', () => {
