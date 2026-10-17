@@ -10,7 +10,15 @@ import {
   PUCK_RESTITUTION,
 } from '../config/physics';
 import { COLORS } from '../config/theme';
-import { BURST_MS, burstFrame, drawRays, mixColor } from './Burst';
+import {
+  BURST_MS,
+  burstFrame,
+  drawRays,
+  drawSparks,
+  makeSparks,
+  mixColor,
+  type Spark,
+} from './Burst';
 import { FLIP_LIFT, FLIP_MS, FLIP_TURNS } from '../config/physics';
 import { campOf } from '../domain/rules';
 import type { Vec } from '../domain/types';
@@ -47,6 +55,8 @@ export interface Puck {
 }
 
 const PUCK_TAG: FixtureTag = { kind: 'puck' };
+/** Étincelles qui jaillissent du palet quand son chiffre change. */
+const PUCK_SPARKS = 10;
 const MASK_ALL = CATEGORY.PUCK | CATEGORY.WALL | CATEGORY.ELASTIC;
 const MASK_NO_ELASTIC = CATEGORY.PUCK | CATEGORY.WALL;
 
@@ -112,6 +122,11 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   burst.label = 'burst';
   burst.visible = false;
   view.addChild(burst);
+  const sparksView = new Graphics();
+  sparksView.label = 'sparks';
+  sparksView.visible = false;
+  view.addChild(sparksView);
+  let sparks: Spark[] = [];
   let flashElapsed: number | null = null;
   let ignoring = false;
   let value: number | null = null;
@@ -158,6 +173,7 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
     isFlipping: () => flipFrom !== null,
     flash: () => {
       flashElapsed = 0;
+      sparks = makeSparks(PUCK_SPARKS);
     },
     isFlashing: () => flashElapsed !== null,
     syncView: (dtMs = 0) => {
@@ -195,6 +211,15 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
         text.tint = mixColor(0xffffff, COLORS.button, f.glow);
         burst.visible = flashElapsed !== null;
         if (burst.visible) drawRays(burst, PUCK_RADIUS + 6, PUCK_RADIUS + 34, f);
+        sparksView.visible = burst.visible;
+        if (sparksView.visible)
+          drawSparks(
+            sparksView,
+            sparks,
+            (flashElapsed ?? BURST_MS) / BURST_MS,
+            () => PUCK_RADIUS,
+            70,
+          );
       }
       const angle = body.getAngle();
       view.rotation = angle;

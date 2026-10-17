@@ -89,7 +89,9 @@ describe('Puck — éclat du chiffre', () => {
     p.syncView(BURST_MS * 0.25);
     expect(labelText(p.view).scale.x).toBeGreaterThan(1.3);
     expect(p.view.getChildByLabel('burst', true)!.visible).toBe(true);
+    expect(p.view.getChildByLabel('sparks', true)!.visible).toBe(true);
     p.syncView(BURST_MS);
+    expect(p.view.getChildByLabel('sparks', true)!.visible).toBe(false);
     expect(p.isFlashing()).toBe(false);
     expect(labelText(p.view).scale.x).toBe(1);
     expect(labelText(p.view).tint).toBe(0xffffff);

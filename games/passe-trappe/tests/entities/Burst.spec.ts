@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BURST_MS, burstFrame } from '../../src/entities/Burst';
+import { BURST_MS, burstFrame, makeSparks, sparkAt } from '../../src/entities/Burst';
 
 describe('burstFrame — éclat d’un chiffre qui change', () => {
   it('part de l’état normal', () => {
@@ -31,5 +31,39 @@ describe('burstFrame — éclat d’un chiffre qui change', () => {
   it('dure assez pour être vu, sans gêner le jeu', () => {
     expect(BURST_MS).toBeGreaterThanOrEqual(400);
     expect(BURST_MS).toBeLessThanOrEqual(800);
+  });
+});
+
+describe('étincelles', () => {
+  const rng = (() => {
+    let i = 0;
+    return () => (i++ * 0.37) % 1;
+  })();
+
+  it('makeSparks : des étincelles réparties tout autour', () => {
+    const sparks = makeSparks(10, rng);
+    expect(sparks).toHaveLength(10);
+    const angles = sparks.map((s) => s.angle).sort((a, b) => a - b);
+    // Pas de gros trou : chaque secteur de 90° a au moins une étincelle.
+    for (let q = 0; q < 4; q++)
+      expect(angles.some((a) => a >= (q * Math.PI) / 2 && a < ((q + 1) * Math.PI) / 2)).toBe(true);
+  });
+
+  it('une étincelle jaillit vers l’extérieur, rapetisse et s’éteint', () => {
+    const [spark] = makeSparks(1, () => 0.5);
+    const early = sparkAt(spark!, 0.1);
+    const late = sparkAt(spark!, 0.8);
+    expect(late.distance).toBeGreaterThan(early.distance);
+    expect(late.size).toBeLessThan(early.size);
+    expect(late.alpha).toBeLessThan(early.alpha);
+    const end = sparkAt(spark!, 1);
+    expect(end.alpha).toBe(0);
+    expect(end.size).toBe(0);
+  });
+
+  it('les étincelles ne vont pas toutes à la même distance (jaillissement irrégulier)', () => {
+    const sparks = makeSparks(10, rng);
+    const reach = new Set(sparks.map((s) => sparkAt(s, 0.9).distance.toFixed(2)));
+    expect(reach.size).toBeGreaterThan(3);
   });
 });

@@ -45,3 +45,58 @@ export function drawRays(g: Graphics, inner: number, outer: number, frame: Burst
   }
   g.stroke({ width: 5, color: COLORS.button, cap: 'round', alpha: frame.rays.alpha });
 }
+
+/** Étincelle de l'éclat : direction, portée relative, taille (px) et léger retard au départ. */
+export interface Spark {
+  angle: number;
+  speed: number;
+  size: number;
+  delay: number;
+}
+
+/** `count` étincelles réparties tout autour (directions régulières, un peu désordonnées). */
+export function makeSparks(count: number, rng: () => number = Math.random): Spark[] {
+  return Array.from({ length: count }, (_, i) => ({
+    angle: ((i + rng() * 0.8) * 2 * Math.PI) / count,
+    speed: 0.55 + rng() * 0.7,
+    size: 3 + rng() * 3,
+    delay: rng() * 0.15,
+  }));
+}
+
+/** Étincelle à `t` ∈ [0, 1] : distance parcourue (fraction de la portée), taille, opacité. */
+export function sparkAt(
+  spark: Spark,
+  t: number,
+): { distance: number; size: number; alpha: number } {
+  if (t >= 1) return { distance: spark.speed, size: 0, alpha: 0 };
+  const u = Math.min(1, Math.max(0, (t - spark.delay) / (1 - spark.delay)));
+  if (u === 0) return { distance: 0, size: 0, alpha: 0 };
+  return { distance: spark.speed * easeOut(u), size: spark.size * (1 - u), alpha: 1 - u * u };
+}
+
+/**
+ * Étincelles jaunes (petits losanges) qui jaillissent vers l'extérieur : chacune part du bord de
+ * la forme (`edge(angle)` = distance du centre au bord dans cette direction) et file sur `reach` px.
+ */
+export function drawSparks(
+  g: Graphics,
+  sparks: readonly Spark[],
+  t: number,
+  edge: (angle: number) => number,
+  reach: number,
+): void {
+  g.clear();
+  for (const s of sparks) {
+    const f = sparkAt(s, t);
+    if (f.alpha <= 0 || f.size <= 0) continue;
+    const d = edge(s.angle) + reach * f.distance;
+    const x = Math.cos(s.angle) * d;
+    const y = Math.sin(s.angle) * d;
+    const r = f.size;
+    g.poly([x, y - r * 1.6, x + r, y, x, y + r * 1.6, x - r, y]).fill({
+      color: COLORS.button,
+      alpha: f.alpha,
+    });
+  }
+}

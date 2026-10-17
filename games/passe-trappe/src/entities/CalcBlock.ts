@@ -3,7 +3,7 @@ import { opSymbol, type Pair } from '@gambette/math-sdk';
 import { CALC_BLOCK, CALC_BLOCK_SIZE } from '../config/dimensions';
 import { COLORS } from '../config/theme';
 import type { Player } from '../domain/types';
-import { BURST_MS, burstFrame } from './Burst';
+import { BURST_MS, burstFrame, drawSparks, makeSparks, type Spark } from './Burst';
 
 export interface CalcBlock {
   readonly view: Container;
@@ -14,6 +14,9 @@ export interface CalcBlock {
   isFlashing(): boolean;
   update(dtMs: number): void;
 }
+
+/** Étincelles qui jaillissent du cadre quand le calcul change. */
+const CALC_SPARKS = 16;
 
 export function createCalcBlock(player: Player): CalcBlock {
   const view = new Container();
@@ -41,6 +44,17 @@ export function createCalcBlock(player: Player): CalcBlock {
   const halo = new Graphics();
   halo.visible = false;
   view.addChild(halo);
+  const sparksView = new Graphics();
+  sparksView.label = 'sparks';
+  sparksView.visible = false;
+  view.addChild(sparksView);
+  let sparks: Spark[] = [];
+  // Distance du centre au bord du cadre dans la direction `a`.
+  const edge = (a: number): number =>
+    Math.min(
+      w / 2 / Math.max(Math.abs(Math.cos(a)), 1e-6),
+      h / 2 / Math.max(Math.abs(Math.sin(a)), 1e-6),
+    );
   let flashElapsed: number | null = null;
   return {
     view,
@@ -50,6 +64,7 @@ export function createCalcBlock(player: Player): CalcBlock {
     text: () => label.text,
     flash: () => {
       flashElapsed = 0;
+      sparks = makeSparks(CALC_SPARKS);
     },
     isFlashing: () => flashElapsed !== null,
     update: (dtMs) => {
@@ -60,6 +75,8 @@ export function createCalcBlock(player: Player): CalcBlock {
       // Rebond plus discret que celui d'un chiffre : le bloc est grand.
       view.scale.set(1 + (f.scale - 1) * 0.3);
       halo.visible = flashElapsed !== null;
+      sparksView.visible = halo.visible;
+      if (sparksView.visible) drawSparks(sparksView, sparks, flashElapsed! / BURST_MS, edge, 60);
       halo.clear();
       if (halo.visible) {
         const grow = 6 + 22 * f.rays.radius;
