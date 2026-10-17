@@ -1,0 +1,221 @@
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWorld';
+import { createBoard } from '../../src/entities/Board';
+import { createPuck, type Puck } from '../../src/entities/Puck';
+import { createDragController } from '../../src/input/DragController';
+import { elasticLine } from '../../src/domain/elastic';
+import { campOf } from '../../src/domain/rules';
+import { MID_Y, PUCK_RADIUS } from '../../src/config/dimensions';
+import { DROP_MAX_SPEED, PUSHED_MAX_SPEED } from '../../src/config/physics';
+
+let physics: PhysicsWorld;
+const step = (n = 1): void => {
+  for (let i = 0; i < n; i++) physics.step(1000 / 60);
+};
+
+const setup = (positions: Array<{ x: number; y: number }>) => {
+  physics = createPhysicsWorld();
+  createBoard(physics);
+  const pucks: Puck[] = positions.map((p) => createPuck(physics, p));
+  const drag = createDragController({ physics, pucks: () => pucks });
+  return { pucks, drag };
+};
+
+afterEach(() => physics.destroy());
+
+describe('DragController', () => {
+  it('saisir un palet de son camp, l’étirer derrière l’élastique et relâcher → lancé vers la cloison', () => {
+    const lineA = elasticLine('A');
+    const { pucks, drag } = setup([{ x: 360, y: 900 }]);
+    drag.pointerDown(1, { x: 360, y: 900 });
+    expect(drag.held('A')).toBe(pucks[0]);
+    for (let y = 900; y <= lineA.y + 80 - PUCK_RADIUS; y += 20) {
+      drag.pointerMove(1, { x: 360, y });
+      step(3);
+    }
+    drag.pointerUp(1);
+    expect(drag.held('A')).toBeNull();
+    expect(pucks[0]!.velocity().y).toBeLessThan(-500);
+  });
+
+  it('toucher dans le vide de son camp → rien n’est saisi', () => {
+    const { drag } = setup([{ x: 360, y: 900 }]);
+    drag.pointerDown(1, { x: 100, y: 1000 });
+    expect(drag.held('A')).toBeNull();
+  });
+
+  it('impossible de saisir un palet du camp adverse', () => {
+    const { drag } = setup([{ x: 360, y: MID_Y - 30 }]);
+    drag.pointerDown(1, { x: 360, y: MID_Y + 5 });
+    expect(drag.held('A')).toBeNull();
+    expect(drag.held('B')).toBeNull();
+  });
+
+  it('second doigt du même joueur ignoré ; les deux joueurs en même temps', () => {
+    const { pucks, drag } = setup([
+      { x: 200, y: 900 },
+      { x: 500, y: 900 },
+      { x: 360, y: 380 },
+    ]);
+    drag.pointerDown(1, { x: 200, y: 900 });
+    drag.pointerDown(2, { x: 500, y: 900 });
+    drag.pointerDown(3, { x: 360, y: 380 });
+    expect(drag.held('A')).toBe(pucks[0]);
+    expect(drag.held('B')).toBe(pucks[2]);
+  });
+
+  it('le palet tenu ne franchit pas la cloison même si le doigt la passe', () => {
+    const { pucks, drag } = setup([{ x: 150, y: 800 }]);
+    drag.pointerDown(1, { x: 150, y: 800 });
+    drag.pointerMove(1, { x: 150, y: 200 });
+    step(60);
+    expect(pucks[0]!.position().y).toBeGreaterThan(MID_Y);
+  });
+
+  it('pousser un palet à la main ne le fait pas passer la cloison', () => {
+    const { pucks, drag } = setup([
+      { x: 360, y: 950 },
+      { x: 360, y: 820 },
+    ]);
+    drag.pointerDown(1, { x: 360, y: 950 });
+    for (let y = 950; y >= 100; y -= 10) {
+      drag.pointerMove(1, { x: 360, y });
+      step(1);
+    }
+    step(60);
+    expect(campOf(pucks[1]!.position().y)).toBe('A');
+  });
+
+  it('un palet poussé par un palet tenu ne dépasse pas PUSHED_MAX_SPEED', () => {
+    const { pucks, drag } = setup([
+      { x: 150, y: 950 },
+      { x: 150, y: 820 },
+    ]);
+    const start = pucks[1]!.position();
+    drag.pointerDown(1, { x: 150, y: 950 });
+    let maxSpeed = 0;
+    for (let y = 950; y >= 700; y -= 25) {
+      drag.pointerMove(1, { x: 150, y });
+      for (let k = 0; k < 2; k++) {
+        step();
+        const v = pucks[1]!.velocity();
+        maxSpeed = Math.max(maxSpeed, Math.hypot(v.x, v.y));
+      }
+    }
+    expect(maxSpeed).toBeLessThanOrEqual(PUSHED_MAX_SPEED + 1);
+    expect(Math.abs(pucks[1]!.position().y - start.y)).toBeGreaterThan(5);
+  });
+
+  it('aucun palet tenu : le handler post-solve ne parcourt pas la liste des palets', () => {
+    physics = createPhysicsWorld();
+    createBoard(physics);
+    const pucks = [
+      createPuck(physics, { x: 300, y: 900 }),
+      createPuck(physics, { x: 380, y: 900 }), // chevauche : contact à chaque pas
+    ];
+    const list = vi.fn(() => pucks);
+    createDragController({ physics, pucks: list });
+    step(10);
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it('relâcher sans étirer → palet simplement lâché (pas de lancer)', () => {
+    const { pucks, drag } = setup([{ x: 360, y: 900 }]);
+    drag.pointerDown(1, { x: 360, y: 900 });
+    drag.pointerUp(1);
+    step(30);
+    expect(Math.hypot(pucks[0]!.velocity().x, pucks[0]!.velocity().y)).toBeLessThan(50);
+  });
+
+  it('balayer puis lâcher devant l’élastique → vitesse plafonnée à DROP_MAX_SPEED', () => {
+    const { pucks, drag } = setup([{ x: 360, y: 1000 }]);
+    drag.pointerDown(1, { x: 360, y: 1000 });
+    for (let y = 1000; y <= 1240; y += 60) {
+      drag.pointerMove(1, { x: 360, y });
+      step(3);
+    }
+    drag.pointerMove(1, { x: 360, y: 900 });
+    step(3);
+    drag.pointerUp(1);
+    const v = pucks[0]!.velocity();
+    expect(Math.hypot(v.x, v.y)).toBeLessThanOrEqual(DROP_MAX_SPEED + 1);
+  });
+
+  it('reset et destroy relâchent les palets tenus (aucun joint restant)', () => {
+    const { drag } = setup([{ x: 360, y: 900 }]);
+    drag.pointerDown(1, { x: 360, y: 900 });
+    drag.reset();
+    expect(drag.held('A')).toBeNull();
+    expect(physics.world.getJointList()).toBeNull();
+  });
+});
+
+describe('DragController — mauvais palet', () => {
+  let releases: Array<{ player: string; stretch: number }> = [];
+  const stretchAndRelease = (canLaunch: boolean) => {
+    physics = createPhysicsWorld();
+    createBoard(physics);
+    const puck = createPuck(physics, { x: 360, y: 950 });
+    releases = [];
+    const drag = createDragController({
+      physics,
+      pucks: () => [puck],
+      canLaunch: () => canLaunch,
+      onElasticRelease: (player, stretch) => releases.push({ player, stretch }),
+    });
+    const lineA = elasticLine('A');
+    drag.pointerDown(1, { x: 360, y: 950 });
+    for (let y = 950; y <= lineA.y + 80; y += 20) {
+      drag.pointerMove(1, { x: 360, y });
+      step(3);
+    }
+    drag.pointerUp(1);
+    return puck;
+  };
+
+  it('élastique tendu puis relâché : mauvais palet replacé aussitôt là où le glisser a commencé', () => {
+    const puck = stretchAndRelease(false);
+    expect(puck.position().x).toBeCloseTo(360, 3);
+    expect(puck.position().y).toBeCloseTo(950, 3);
+    expect(Math.hypot(puck.velocity().x, puck.velocity().y)).toBeLessThan(1e-6);
+    expect(puck.ignoresElastic()).toBe(false);
+    expect(puck.isFlipping()).toBe(true);
+    expect(releases).toHaveLength(1);
+    expect(releases[0]!.player).toBe('A');
+    expect(releases[0]!.stretch).toBeGreaterThan(20);
+    step(30);
+    expect(Math.hypot(puck.position().x - 360, puck.position().y - 950)).toBeLessThan(1);
+  });
+
+  it('un palet en plein retournement ne peut pas être saisi', () => {
+    physics = createPhysicsWorld();
+    createBoard(physics);
+    const puck = createPuck(physics, { x: 360, y: 950 });
+    const drag = createDragController({ physics, pucks: () => [puck] });
+    puck.flip({ x: 360, y: 1150 });
+    drag.pointerDown(1, { x: 360, y: 950 });
+    expect(drag.held('A')).toBeNull();
+  });
+
+  it('bon palet : lancer normal', () => {
+    const puck = stretchAndRelease(true);
+    expect(puck.velocity().y).toBeLessThan(-500);
+    expect(puck.isFlipping()).toBe(false);
+    expect(releases).toHaveLength(1);
+  });
+
+  it('mauvais palet simplement déplacé (élastique non tendu) : lâché sur place, pas replacé', () => {
+    physics = createPhysicsWorld();
+    createBoard(physics);
+    const puck = createPuck(physics, { x: 360, y: 950 });
+    const drag = createDragController({ physics, pucks: () => [puck], canLaunch: () => false });
+    drag.pointerDown(1, { x: 360, y: 950 });
+    for (let x = 360; x >= 200; x -= 20) {
+      drag.pointerMove(1, { x, y: 950 });
+      step(3);
+    }
+    step(20);
+    drag.pointerUp(1);
+    expect(puck.position().x).toBeLessThan(260);
+  });
+});

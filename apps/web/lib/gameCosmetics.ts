@@ -17,8 +17,13 @@ const BY_KEY: Record<string, GameCosmetic> = {
     icon: 'mdi-rabbit',
     traits: ['calcul', 'adresse'],
   },
-  'tower-math': {
+  'passe-trappe': {
     color: 'tertiary',
+    icon: 'mdi-swap-vertical',
+    traits: ['adresse', '2 joueurs'],
+  },
+  'tower-math': {
+    color: 'warning',
     icon: 'mdi-cube-outline',
     traits: ['calcul', 'réflexes'],
   },

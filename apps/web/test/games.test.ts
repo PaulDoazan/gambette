@@ -19,3 +19,11 @@ describe('registre de jeux', () => {
     for (const m of registry.list()) expect(registry.get(m.meta.key)).toBe(m);
   });
 });
+
+describe('registre de jeux — passe-trappe', () => {
+  it('contient passe-trappe avec une consigne, après rabbit-math', () => {
+    const keys = registry.list().map((m) => m.meta.key);
+    expect(keys).toEqual(['rabbit-math', 'passe-trappe', 'tower-math']);
+    expect(registry.get('passe-trappe')!.meta.instructions.length).toBeGreaterThan(0);
+  });
+});
