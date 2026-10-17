@@ -22,10 +22,10 @@ export const PUCK_SPACING = 8;
 /** Largeur du trou de la cloison : ≈ 1,6 × diamètre d'un palet. */
 export const GAP_WIDTH = Math.round(PUCK_RADIUS * 2 * 1.6);
 /**
- * Bande (px écran) que la cloison doit couvrir : les boutons posés dessus (quitter, plein écran,
- * réglages ; 40 px au plus) et 8 px de marge de chaque côté.
+ * Bande (px écran) que la cloison doit couvrir : tout juste la hauteur du plus haut des boutons
+ * posés dessus (l'engrenage, 40 px ; quitter et plein écran sont moins hauts).
  */
-export const UI_BAND_PX = 56;
+export const UI_BAND_PX = 40;
 const MIN_DIVIDER_THICKNESS = 20;
 /** Épaisseur de la cloison (unités plateau) pour une échelle écran/plateau donnée. */
 const dividerFor = (scale: number): number =>

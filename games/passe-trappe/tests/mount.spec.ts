@@ -251,6 +251,9 @@ describe('réglages', () => {
     expect(gear.style.height).toBe('40px');
     expect(gear.style.borderRadius).toBe('999px');
     expect(gear.style.background).toBe('rgba(255, 255, 255, 0.12)');
+    // Plus gros que celui de Tour de calcul (22 px), sans contour.
+    expect(parseInt(gear.style.fontSize)).toBeGreaterThanOrEqual(30);
+    expect(gear.style.borderStyle).toBe('none');
     expect(gear.style.right).toBe('12px');
     expect(gear.style.top).toBe('50%');
     // Plus d'engrenage dessiné dans la scène (le toucher ne peut plus atteindre le tir).

@@ -123,7 +123,8 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
       });
       app.stage.addChild(panel.view);
     };
-    // Engrenage : même bouton que Tour de calcul, sur la cloison à droite (en miroir de « Quitter »).
+    // Engrenage : bouton de Tour de calcul, en plus gros et sans contour, sur la cloison à droite
+    // (en miroir de « Quitter »).
     const gear = document.createElement('button');
     gear.dataset.test = 'passe-trappe-settings';
     gear.type = 'button';
@@ -133,8 +134,8 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
     gear.style.cssText =
       'position:absolute;top:50%;right:12px;transform:translateY(-50%);z-index:6;' +
       'width:40px;height:40px;padding:0;' +
-      'border:1px solid rgba(255,255,255,0.4);border-radius:999px;cursor:pointer;' +
-      'font:400 22px system-ui,sans-serif;background:rgba(255,255,255,0.12);color:#fff;';
+      'border:none;border-radius:999px;cursor:pointer;' +
+      'font:400 32px/1 system-ui,sans-serif;background:rgba(255,255,255,0.12);color:#fff;';
     gear.addEventListener('click', openSettings);
     el.appendChild(gear);
     cleanups.push(() => gear.remove());

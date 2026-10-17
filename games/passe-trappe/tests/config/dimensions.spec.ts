@@ -42,7 +42,7 @@ describe('configureBoard', () => {
       configureBoard(1280, scale);
       expect(dims.DIVIDER_THICKNESS * scale).toBeGreaterThanOrEqual(dims.UI_BAND_PX);
     }
-    expect(dims.UI_BAND_PX).toBeGreaterThanOrEqual(40 + 2 * 8); // bouton le plus haut + marges
+    expect(dims.UI_BAND_PX).toBe(40); // tout juste la hauteur du bouton le plus haut (engrenage)
   });
 
   it('cloison épaisse : les blocs de calcul restent hors de la cloison', () => {
