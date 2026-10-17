@@ -147,6 +147,12 @@ export function createGameScene(deps: {
     view.addChild(puck.view);
     return puck;
   });
+  // Calque d'effets au-dessus de tout : les étincelles ne sont masquées par aucun palet.
+  const effects = new Container();
+  effects.label = 'effects';
+  for (const p of PLAYERS) effects.addChild(blocks[p].sparks);
+  for (const puck of pucks) effects.addChild(puck.sparks);
+  view.addChild(effects);
   const calcs = {} as Record<Player, Pair>;
   const crossings = createCrossingDetector();
   let clock = 0;

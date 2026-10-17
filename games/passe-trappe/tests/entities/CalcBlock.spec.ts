@@ -30,9 +30,10 @@ describe('CalcBlock', () => {
     expect(a.isFlashing()).toBe(true);
     a.update(BURST_MS * 0.25);
     expect(a.view.scale.x).toBeGreaterThan(1.05);
-    expect(a.view.getChildByLabel('sparks', true)!.visible).toBe(true);
+    expect(a.sparks.visible).toBe(true);
+    expect(a.sparks.position.x).toBe(a.view.position.x);
     a.update(BURST_MS);
-    expect(a.view.getChildByLabel('sparks', true)!.visible).toBe(false);
+    expect(a.sparks.visible).toBe(false);
     expect(a.isFlashing()).toBe(false);
     expect(a.view.scale.x).toBe(1);
   });

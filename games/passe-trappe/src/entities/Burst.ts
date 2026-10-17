@@ -59,7 +59,7 @@ export function makeSparks(count: number, rng: () => number = Math.random): Spar
   return Array.from({ length: count }, (_, i) => ({
     angle: ((i + rng() * 0.8) * 2 * Math.PI) / count,
     speed: 0.55 + rng() * 0.7,
-    size: 3 + rng() * 3,
+    size: 8 + rng() * 6,
     delay: rng() * 0.15,
   }));
 }
@@ -75,24 +75,53 @@ export function sparkAt(
   return { distance: spark.speed * easeOut(u), size: spark.size * (1 - u), alpha: 1 - u * u };
 }
 
+/** Point de départ d'une étincelle et sa direction (radians, vers l'extérieur). */
+export interface SparkOrigin {
+  x: number;
+  y: number;
+  dir: number;
+}
+
+/** Palet (cercle de rayon `r`) : l'étincelle part du bord, dans sa direction. */
+export const circleSparkOrigin =
+  (r: number) =>
+  (s: Spark): SparkOrigin => ({ x: Math.cos(s.angle) * r, y: Math.sin(s.angle) * r, dir: s.angle });
+
 /**
- * Étincelles jaunes (petits losanges) qui jaillissent vers l'extérieur : chacune part du bord de
- * la forme (`edge(angle)` = distance du centre au bord dans cette direction) et file sur `reach` px.
+ * Cadre `w` × `h` centré : les étincelles sont réparties le long du pourtour (4 côtés), chacune
+ * part vers l'extérieur du côté où elle naît, un peu de biais.
+ */
+export function rectSparkOrigin(s: Spark, w: number, h: number): SparkOrigin {
+  const per = 2 * (w + h);
+  let d = ((s.angle / (2 * Math.PI)) % 1) * per;
+  const tilt = (s.speed - 0.9) * 0.8; // biais ±0,28 rad, tiré de la vitesse
+  if (d < w) return { x: -w / 2 + d, y: -h / 2, dir: -Math.PI / 2 + tilt };
+  d -= w;
+  if (d < h) return { x: w / 2, y: -h / 2 + d, dir: tilt };
+  d -= h;
+  if (d < w) return { x: w / 2 - d, y: h / 2, dir: Math.PI / 2 + tilt };
+  d -= w;
+  return { x: -w / 2, y: h / 2 - d, dir: Math.PI + tilt };
+}
+
+/**
+ * Étincelles jaunes (losanges) qui jaillissent vers l'extérieur : chacune part de `origin(s)` et
+ * file sur `reach` px dans sa direction.
  */
 export function drawSparks(
   g: Graphics,
   sparks: readonly Spark[],
   t: number,
-  edge: (angle: number) => number,
+  origin: (s: Spark) => SparkOrigin,
   reach: number,
 ): void {
   g.clear();
   for (const s of sparks) {
     const f = sparkAt(s, t);
     if (f.alpha <= 0 || f.size <= 0) continue;
-    const d = edge(s.angle) + reach * f.distance;
-    const x = Math.cos(s.angle) * d;
-    const y = Math.sin(s.angle) * d;
+    const o = origin(s);
+    const x = o.x + Math.cos(o.dir) * reach * f.distance;
+    const y = o.y + Math.sin(o.dir) * reach * f.distance;
     const r = f.size;
     g.poly([x, y - r * 1.6, x + r, y, x, y + r * 1.6, x - r, y]).fill({
       color: COLORS.button,

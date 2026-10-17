@@ -452,6 +452,10 @@ describe('GameScene — calcul', () => {
     for (const [puck] of labelsB) expect(puck.isFlashing()).toBe(false);
     expect(scene.view.getChildByLabel('calc-A', true)!.scale.x).toBeGreaterThan(1);
     expect(scene.view.getChildByLabel('calc-B', true)!.scale.x).toBe(1);
+    // Les étincelles sont dans un calque au-dessus de tout (palets compris).
+    const effects = scene.view.getChildByLabel('effects')!;
+    expect(scene.view.children.at(-1)).toBe(effects);
+    for (const p of scene.pucks()) expect(effects.children).toContain(p.sparks);
     expect(correctPerCamp(scene)).toEqual({ A: 1, B: 1 });
     expect(scene.isCorrect(mover)).toBe(false);
     const valsB = scene

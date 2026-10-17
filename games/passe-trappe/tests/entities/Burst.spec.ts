@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { BURST_MS, burstFrame, makeSparks, sparkAt } from '../../src/entities/Burst';
+import {
+  BURST_MS,
+  burstFrame,
+  makeSparks,
+  rectSparkOrigin,
+  sparkAt,
+} from '../../src/entities/Burst';
 
 describe('burstFrame — éclat d’un chiffre qui change', () => {
   it('part de l’état normal', () => {
@@ -65,5 +71,36 @@ describe('étincelles', () => {
     const sparks = makeSparks(10, rng);
     const reach = new Set(sparks.map((s) => sparkAt(s, 0.9).distance.toFixed(2)));
     expect(reach.size).toBeGreaterThan(3);
+  });
+});
+
+describe('étincelles — taille et pourtour', () => {
+  it('assez grosses pour être vues à l’échelle d’un téléphone (≥ 8 unités)', () => {
+    for (const s of makeSparks(20)) expect(s.size).toBeGreaterThanOrEqual(8);
+  });
+
+  it('cadre : les étincelles partent des 4 côtés, vers l’extérieur', () => {
+    const w = 230;
+    const h = 76;
+    const sides = new Set<string>();
+    for (const s of makeSparks(24)) {
+      const o = rectSparkOrigin(s, w, h);
+      const side =
+        Math.abs(o.y + h / 2) < 1e-6
+          ? 'haut'
+          : Math.abs(o.y - h / 2) < 1e-6
+            ? 'bas'
+            : o.x < 0
+              ? 'gauche'
+              : 'droite';
+      sides.add(side);
+      // Direction vers l'extérieur du cadre.
+      const out = { x: Math.cos(o.dir), y: Math.sin(o.dir) };
+      if (side === 'haut') expect(out.y).toBeLessThan(0);
+      if (side === 'bas') expect(out.y).toBeGreaterThan(0);
+      if (side === 'gauche') expect(out.x).toBeLessThan(0);
+      if (side === 'droite') expect(out.x).toBeGreaterThan(0);
+    }
+    expect(sides).toEqual(new Set(['haut', 'bas', 'gauche', 'droite']));
   });
 });

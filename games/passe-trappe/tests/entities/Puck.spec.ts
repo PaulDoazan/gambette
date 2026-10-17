@@ -89,9 +89,13 @@ describe('Puck — éclat du chiffre', () => {
     p.syncView(BURST_MS * 0.25);
     expect(labelText(p.view).scale.x).toBeGreaterThan(1.3);
     expect(p.view.getChildByLabel('burst', true)!.visible).toBe(true);
-    expect(p.view.getChildByLabel('sparks', true)!.visible).toBe(true);
+    // Étincelles hors de la vue du palet (calque au-dessus de tous les palets), placées sur lui.
+    expect(p.view.getChildByLabel('sparks', true)).toBeNull();
+    expect(p.sparks.visible).toBe(true);
+    expect(p.sparks.position.x).toBe(p.view.position.x);
+    expect(p.sparks.position.y).toBe(p.view.position.y);
     p.syncView(BURST_MS);
-    expect(p.view.getChildByLabel('sparks', true)!.visible).toBe(false);
+    expect(p.sparks.visible).toBe(false);
     expect(p.isFlashing()).toBe(false);
     expect(labelText(p.view).scale.x).toBe(1);
     expect(labelText(p.view).tint).toBe(0xffffff);

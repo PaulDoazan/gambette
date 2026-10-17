@@ -12,6 +12,7 @@ import {
 import { COLORS } from '../config/theme';
 import {
   BURST_MS,
+  circleSparkOrigin,
   burstFrame,
   drawRays,
   drawSparks,
@@ -25,6 +26,8 @@ import type { Vec } from '../domain/types';
 
 export interface Puck {
   readonly view: Container;
+  /** Étincelles de l'éclat : à placer dans un calque au-dessus de tous les palets. */
+  readonly sparks: Graphics;
   readonly body: Body;
   position(): Vec;
   /** px/s */
@@ -56,7 +59,7 @@ export interface Puck {
 
 const PUCK_TAG: FixtureTag = { kind: 'puck' };
 /** Étincelles qui jaillissent du palet quand son chiffre change. */
-const PUCK_SPARKS = 10;
+const PUCK_SPARKS = 14;
 const MASK_ALL = CATEGORY.PUCK | CATEGORY.WALL | CATEGORY.ELASTIC;
 const MASK_NO_ELASTIC = CATEGORY.PUCK | CATEGORY.WALL;
 
@@ -122,10 +125,11 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   burst.label = 'burst';
   burst.visible = false;
   view.addChild(burst);
+  // Hors de la vue : le calque d'effets de la scène les affiche au-dessus des autres palets.
   const sparksView = new Graphics();
   sparksView.label = 'sparks';
   sparksView.visible = false;
-  view.addChild(sparksView);
+  const sparkOrigin = circleSparkOrigin(PUCK_RADIUS);
   let sparks: Spark[] = [];
   let flashElapsed: number | null = null;
   let ignoring = false;
@@ -135,6 +139,7 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
 
   const api: Puck = {
     view,
+    sparks: sparksView,
     body,
     position: () => {
       const p = body.getPosition();
@@ -213,14 +218,9 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
         if (burst.visible) drawRays(burst, PUCK_RADIUS + 6, PUCK_RADIUS + 34, f);
         sparksView.visible = burst.visible;
         if (sparksView.visible)
-          drawSparks(
-            sparksView,
-            sparks,
-            (flashElapsed ?? BURST_MS) / BURST_MS,
-            () => PUCK_RADIUS,
-            70,
-          );
+          drawSparks(sparksView, sparks, (flashElapsed ?? BURST_MS) / BURST_MS, sparkOrigin, 90);
       }
+      sparksView.position.set(view.position.x, view.position.y);
       const angle = body.getAngle();
       view.rotation = angle;
       // Étiquette droite pour le joueur du camp où se trouve le palet.
@@ -228,6 +228,7 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
     },
     destroy: () => {
       physics.world.destroyBody(body);
+      sparksView.destroy();
       view.destroy({ children: true });
     },
   };

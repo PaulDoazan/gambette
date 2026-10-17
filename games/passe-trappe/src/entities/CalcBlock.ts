@@ -3,10 +3,12 @@ import { opSymbol, type Pair } from '@gambette/math-sdk';
 import { CALC_BLOCK, CALC_BLOCK_SIZE } from '../config/dimensions';
 import { COLORS } from '../config/theme';
 import type { Player } from '../domain/types';
-import { BURST_MS, burstFrame, drawSparks, makeSparks, type Spark } from './Burst';
+import { BURST_MS, burstFrame, drawSparks, makeSparks, rectSparkOrigin, type Spark } from './Burst';
 
 export interface CalcBlock {
   readonly view: Container;
+  /** Étincelles de l'éclat : à placer dans un calque au-dessus des palets. */
+  readonly sparks: Graphics;
   setPair(pair: Pair): void;
   text(): string;
   /** Éclat (nouveau calcul) : le bloc rebondit, un contour jaune s'élargit et s'efface. */
@@ -16,7 +18,7 @@ export interface CalcBlock {
 }
 
 /** Étincelles qui jaillissent du cadre quand le calcul change. */
-const CALC_SPARKS = 16;
+const CALC_SPARKS = 24;
 
 export function createCalcBlock(player: Player): CalcBlock {
   const view = new Container();
@@ -44,20 +46,18 @@ export function createCalcBlock(player: Player): CalcBlock {
   const halo = new Graphics();
   halo.visible = false;
   view.addChild(halo);
+  // Hors de la vue (calque d'effets de la scène), à la même place et orientation que le bloc.
   const sparksView = new Graphics();
   sparksView.label = 'sparks';
   sparksView.visible = false;
-  view.addChild(sparksView);
+  sparksView.position.copyFrom(view.position);
+  sparksView.rotation = view.rotation;
   let sparks: Spark[] = [];
-  // Distance du centre au bord du cadre dans la direction `a`.
-  const edge = (a: number): number =>
-    Math.min(
-      w / 2 / Math.max(Math.abs(Math.cos(a)), 1e-6),
-      h / 2 / Math.max(Math.abs(Math.sin(a)), 1e-6),
-    );
+  const sparkOrigin = (sp: Spark) => rectSparkOrigin(sp, w, h);
   let flashElapsed: number | null = null;
   return {
     view,
+    sparks: sparksView,
     setPair: (pair) => {
       label.text = `${pair.a} ${opSymbol(pair.op)} ${pair.b} = ?`;
     },
@@ -76,7 +76,8 @@ export function createCalcBlock(player: Player): CalcBlock {
       view.scale.set(1 + (f.scale - 1) * 0.3);
       halo.visible = flashElapsed !== null;
       sparksView.visible = halo.visible;
-      if (sparksView.visible) drawSparks(sparksView, sparks, flashElapsed! / BURST_MS, edge, 60);
+      if (sparksView.visible)
+        drawSparks(sparksView, sparks, flashElapsed! / BURST_MS, sparkOrigin, 70);
       halo.clear();
       if (halo.visible) {
         const grow = 6 + 22 * f.rays.radius;
