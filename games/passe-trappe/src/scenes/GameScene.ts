@@ -14,7 +14,6 @@ import {
   GAP_WIDTH,
   MID_Y,
   PUCK_RADIUS,
-  PUCK_SPACING,
 } from '../config/dimensions';
 import { elasticLine, stretchOf } from '../domain/elastic';
 import { campOf, createWinDetector } from '../domain/rules';
@@ -37,7 +36,7 @@ export interface GameScene {
 /** Couloir de tir laissé libre au milieu : la largeur du trou, dans son axe. */
 const CORRIDOR_HALF = GAP_WIDTH / 2;
 /** Disposition de départ : marges (px) au bord du plateau et devant l'élastique, pas de la grille. */
-const START = { side: 16, elastic: 24, step: 2 * PUCK_RADIUS + 3 * PUCK_SPACING } as const;
+const START = { side: 16, elastic: 12, step: 2 * PUCK_RADIUS + 12 } as const;
 
 /**
  * Disposition de départ : deux groupes sur les côtés, de part et d'autre du couloir du trou,

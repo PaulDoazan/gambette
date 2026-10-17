@@ -11,7 +11,6 @@ import { createApp } from './core/App';
 import { createPhysicsWorld } from './core/PhysicsWorld';
 import { createGameScene, type GameScene } from './scenes/GameScene';
 import { createSettingsScene, type SettingsScene } from './scenes/SettingsScene';
-import { createGearButton } from './entities/GearButton';
 import { loadSettings, saveSettings, settingsChanged } from './services/Settings';
 import { createVictoryScene, type VictoryScene } from './scenes/VictoryScene';
 import { DESIGN_HEIGHT, DESIGN_WIDTH, boardHeightFor, configureBoard } from './config/dimensions';
@@ -28,7 +27,8 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
   // montage (un redimensionnement ultérieur ne fait que remettre à l'échelle).
   const w = el.clientWidth || window.innerWidth;
   const h = el.clientHeight || window.innerHeight;
-  configureBoard(boardHeightFor(w, h));
+  const boardHeight = boardHeightFor(w, h);
+  configureBoard(boardHeight, Math.min(w / DESIGN_WIDTH, h / boardHeight));
   const app = await createApp(el);
   // Tout ce qui est installé après createApp : libéré dans l'ordre inverse, au unmount comme sur échec.
   const cleanups: Array<() => void> = [() => app.destroy()];
@@ -48,13 +48,17 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
 
     // Boutons du SDK masqués pendant un écran en surimpression, réaffichés après la fin du geste.
     let revealTimer: ReturnType<typeof setTimeout> | undefined;
+    const setButtonsHidden = (hidden: boolean): void => {
+      exit.setHidden(hidden);
+      gear.style.display = hidden ? 'none' : '';
+    };
     const hideExit = (): void => {
       clearTimeout(revealTimer);
-      exit.setHidden(true);
+      setButtonsHidden(true);
     };
     const revealExitSoon = (): void => {
       clearTimeout(revealTimer);
-      revealTimer = setTimeout(() => exit.setHidden(false), EXIT_REVEAL_DELAY_MS);
+      revealTimer = setTimeout(() => setButtonsHidden(false), EXIT_REVEAL_DELAY_MS);
     };
 
     let settings = loadSettings();
@@ -119,8 +123,21 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
       });
       app.stage.addChild(panel.view);
     };
-    const gear = createGearButton(openSettings);
-    app.stage.addChild(gear.view);
+    // Engrenage : même bouton que Tour de calcul, sur la cloison à droite (en miroir de « Quitter »).
+    const gear = document.createElement('button');
+    gear.dataset.test = 'passe-trappe-settings';
+    gear.type = 'button';
+    gear.textContent = '⚙';
+    gear.setAttribute('aria-label', 'Choisir les réglages');
+    gear.title = 'Choisir les réglages';
+    gear.style.cssText =
+      'position:absolute;top:50%;right:12px;transform:translateY(-50%);z-index:6;' +
+      'width:40px;height:40px;padding:0;' +
+      'border:1px solid rgba(255,255,255,0.4);border-radius:999px;cursor:pointer;' +
+      'font:400 22px system-ui,sans-serif;background:rgba(255,255,255,0.12);color:#fff;';
+    gear.addEventListener('click', openSettings);
+    el.appendChild(gear);
+    cleanups.push(() => gear.remove());
     cleanups.push(() => {
       closePanel();
       el.querySelector('.cp-overlay')?.remove();

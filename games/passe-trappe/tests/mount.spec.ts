@@ -212,15 +212,18 @@ describe('réglages', () => {
   const tapIn = (c: Container, label: string): void => {
     c.getChildByLabel(label, true)!.emit('pointertap', {} as FederatedPointerEvent);
   };
+  const gearOf = (el: HTMLElement): HTMLButtonElement =>
+    el.querySelector<HTMLButtonElement>('[data-test="passe-trappe-settings"]')!;
+  let mounted: HTMLElement;
   const openSettings = (): Container => {
-    const app = fakeApps[0]!;
-    tapIn(app.stage, 'gear');
-    return app.stage.getChildByLabel('settings', true) as Container;
+    gearOf(mounted).click();
+    return fakeApps[0]!.stage.getChildByLabel('settings', true) as Container;
   };
 
   it('engrenage → panneau : pause (pas de tick, entrées ignorées), bouton quitter masqué', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
+    mounted = el;
     const panel = openSettings();
     expect(panel).not.toBeNull();
     const scene = fakeScenes[0] as FakeScene;
@@ -237,29 +240,43 @@ describe('réglages', () => {
     instance.unmount();
   });
 
-  it('un pointerdown sur l’engrenage ne remonte pas jusqu’à la scène', async () => {
+  it('l’engrenage reprend le bouton de Tour de calcul, sur la cloison à droite', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
-    const stage = fakeApps[0]!.stage;
-    const scene = fakeScenes[0] as FakeScene;
-    // Simule la remontée de Pixi : sans stopPropagation, le stage reçoit l'événement.
-    const e = {
-      pointerId: 1,
-      getLocalPosition: () => ({ x: 590, y: 640 }),
-      stopped: false,
-      stopPropagation() {
-        this.stopped = true;
-      },
-    };
-    stage.getChildByLabel('gear', true)!.emit('pointerdown', e as unknown as FederatedPointerEvent);
-    if (!e.stopped) stage.emit('pointerdown', e as unknown as FederatedPointerEvent);
-    expect(scene.drag.pointerDown).not.toHaveBeenCalled();
+    const gear = gearOf(el);
+    expect(gear.tagName).toBe('BUTTON');
+    expect(gear.textContent).toBe('⚙');
+    expect(gear.getAttribute('aria-label')).toBe('Choisir les réglages');
+    expect(gear.style.width).toBe('40px');
+    expect(gear.style.height).toBe('40px');
+    expect(gear.style.borderRadius).toBe('999px');
+    expect(gear.style.background).toBe('rgba(255, 255, 255, 0.12)');
+    expect(gear.style.right).toBe('12px');
+    expect(gear.style.top).toBe('50%');
+    // Plus d'engrenage dessiné dans la scène (le toucher ne peut plus atteindre le tir).
+    expect(fakeApps[0]!.stage.getChildByLabel('gear', true)).toBeNull();
+    instance.unmount();
+    expect(el.querySelector('[data-test="passe-trappe-settings"]')).toBeNull();
+  });
+
+  it('l’engrenage est masqué pendant le panneau, réaffiché après', async () => {
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    mounted = el;
+    const panel = openSettings();
+    expect(gearOf(el).style.display).toBe('none');
+    vi.useFakeTimers();
+    tapIn(panel, 'close');
+    vi.advanceTimersByTime(EXIT_REVEAL_DELAY_MS);
+    expect(gearOf(el).style.display).not.toBe('none');
+    vi.useRealTimers();
     instance.unmount();
   });
 
   it('fermer sans changement → même partie ; avec changement → nouvelle partie', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
+    mounted = el;
     let panel = openSettings();
     vi.useFakeTimers();
     tapIn(panel, 'close');
@@ -287,6 +304,7 @@ describe('réglages', () => {
   it('démonter avec le panneau ouvert ne lève pas ; la scène est détruite avant la physique', async () => {
     const el = document.createElement('div');
     const instance = await passeTrappe.mount(el, ctx());
+    mounted = el;
     openSettings();
     expect(() => instance.unmount()).not.toThrow();
     expect((fakeScenes[0] as FakeScene).destroy).toHaveBeenCalledTimes(1);
@@ -304,6 +322,8 @@ describe('hauteur du plateau', () => {
     const instance = await passeTrappe.mount(el, ctx());
     expect(dims.DESIGN_HEIGHT).toBe(dims.boardHeightFor(390, 844));
     expect(dims.DESIGN_HEIGHT).toBeGreaterThan(1280);
+    // Cloison assez épaisse à l'échelle de cet écran pour couvrir les boutons.
+    expect(dims.DIVIDER_THICKNESS * (390 / 720)).toBeGreaterThanOrEqual(dims.UI_BAND_PX);
     instance.unmount();
     dims.configureBoard(1280);
   });
