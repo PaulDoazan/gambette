@@ -446,6 +446,12 @@ describe('GameScene — calcul', () => {
     expect(scene.calc('A')).not.toEqual(before.A);
     expect(scene.calc('B')).toEqual(before.B);
     for (const [puck, label] of labelsB) expect(puck.label()).toBe(label);
+    // Éclat : tous les palets du camp A (nouveaux chiffres) et son calcul ; rien côté B.
+    for (const p of scene.pucks().filter((q) => campOf(q.position().y) === 'A'))
+      expect(p.isFlashing()).toBe(true);
+    for (const [puck] of labelsB) expect(puck.isFlashing()).toBe(false);
+    expect(scene.view.getChildByLabel('calc-A', true)!.scale.x).toBeGreaterThan(1);
+    expect(scene.view.getChildByLabel('calc-B', true)!.scale.x).toBe(1);
     expect(correctPerCamp(scene)).toEqual({ A: 1, B: 1 });
     expect(scene.isCorrect(mover)).toBe(false);
     const valsB = scene
@@ -454,6 +460,21 @@ describe('GameScene — calcul', () => {
       .map((p) => p.label());
     expect(new Set(valsB).size).toBe(valsB.length);
     expect(valsB).toHaveLength(6);
+    scene.destroy();
+  });
+
+  it('au départ et à Rejouer : pas d’éclat (seul un changement en cours de partie en déclenche)', () => {
+    physics = createPhysicsWorld();
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: PAIRS,
+      rng: mulberry32(2),
+      onWin: vi.fn(),
+    });
+    expect(scene.pucks().some((p) => p.isFlashing())).toBe(false);
+    scene.reset();
+    expect(scene.pucks().some((p) => p.isFlashing())).toBe(false);
     scene.destroy();
   });
 

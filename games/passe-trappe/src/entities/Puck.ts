@@ -10,6 +10,7 @@ import {
   PUCK_RESTITUTION,
 } from '../config/physics';
 import { COLORS } from '../config/theme';
+import { BURST_MS, burstFrame, drawRays, mixColor } from './Burst';
 import { FLIP_LIFT, FLIP_MS, FLIP_TURNS } from '../config/physics';
 import { campOf } from '../domain/rules';
 import type { Vec } from '../domain/types';
@@ -34,6 +35,9 @@ export interface Puck {
    */
   flip(from: Vec): void;
   isFlipping(): boolean;
+  /** Éclat du chiffre (nouvelle valeur) : gonfle en jaune, rayons autour ; avance avec syncView. */
+  flash(): void;
+  isFlashing(): boolean;
   /**
    * Met la vue à jour : position, rotation, étiquette droite pour le joueur du camp ; fait
    * avancer le retournement de `dtMs`.
@@ -103,6 +107,12 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
   text.label = 'value';
   text.anchor.set(0.5);
   face.addChild(text);
+  // Éclat (rayons) au-dessus de la face, caché hors éclat.
+  const burst = new Graphics();
+  burst.label = 'burst';
+  burst.visible = false;
+  view.addChild(burst);
+  let flashElapsed: number | null = null;
   let ignoring = false;
   let value: number | null = null;
   let flipFrom: Vec | null = null;
@@ -146,6 +156,10 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
       flipElapsed = 0;
     },
     isFlipping: () => flipFrom !== null,
+    flash: () => {
+      flashElapsed = 0;
+    },
+    isFlashing: () => flashElapsed !== null,
     syncView: (dtMs = 0) => {
       const p = api.position();
       if (flipFrom) {
@@ -172,6 +186,15 @@ export function createPuck(physics: PhysicsWorld, at: Vec): Puck {
         view.scale.set(1, 1);
         face.scale.y = 1;
         edge.visible = false;
+      }
+      if (flashElapsed !== null) {
+        flashElapsed += dtMs;
+        const f = burstFrame(flashElapsed / BURST_MS);
+        if (flashElapsed >= BURST_MS) flashElapsed = null;
+        text.scale.set(f.scale);
+        text.tint = mixColor(0xffffff, COLORS.button, f.glow);
+        burst.visible = flashElapsed !== null;
+        if (burst.visible) drawRays(burst, PUCK_RADIUS + 6, PUCK_RADIUS + 34, f);
       }
       const angle = body.getAngle();
       view.rotation = angle;

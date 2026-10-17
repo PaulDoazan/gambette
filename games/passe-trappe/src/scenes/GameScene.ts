@@ -164,13 +164,17 @@ export function createGameScene(deps: {
 
   const inCampOf = (pl: Player): Puck[] => pucks.filter((p) => campOf(p.position().y) === pl);
 
-  // Nouveau calcul pour un camp et ré-étiquetage de tous ses palets.
-  const renewCamp = (pl: Player): void => {
+  // Nouveau calcul pour un camp et ré-étiquetage de tous ses palets ; en cours de partie
+  // (`flash`), un éclat signale le changement sur le calcul et chaque chiffre.
+  const renewCamp = (pl: Player, flash = false): void => {
     calcs[pl] = pickCalc(deps.pairs, (calcs[pl] as Pair | undefined) ?? null, rng);
     blocks[pl].setPair(calcs[pl]);
     const inCamp = inCampOf(pl);
     const labels = labelCamp(calcs[pl], inCamp.length, rng);
     inCamp.forEach((p, i) => p.setLabel(labels ? labels.values[i]! : null));
+    if (!flash) return;
+    blocks[pl].flash();
+    for (const p of inCamp) p.flash();
   };
 
   // Palets arrivés dans un camp dont le calcul ne change pas : nouvelle mauvaise réponse distincte,
@@ -198,7 +202,7 @@ export function createGameScene(deps: {
   // d'arrivée garde son calcul et ses étiquettes, les arrivants reçoivent une étiquette nouvelle.
   const onCrossings = (list: readonly Crossing[]): void => {
     const departed = new Set(list.map((c) => c.from));
-    for (const pl of departed) renewCamp(pl);
+    for (const pl of departed) renewCamp(pl, true);
     for (const pl of PLAYERS) {
       if (departed.has(pl)) continue;
       const arrivals = list.filter((c) => c.to === pl).map((c) => pucks[c.index]!);
@@ -237,6 +241,7 @@ export function createGameScene(deps: {
           else nudgeIfStuck(puck);
         }
       }
+      for (const pl of PLAYERS) blocks[pl].update(deltaMs);
       for (const pl of PLAYERS) {
         const held = drag.held(pl);
         const pos = held ? held.position() : null;

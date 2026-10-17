@@ -4,6 +4,7 @@ import { createPhysicsWorld, type PhysicsWorld } from '../../src/core/PhysicsWor
 import { createPuck } from '../../src/entities/Puck';
 import { FLIP_MS } from '../../src/config/physics';
 import { MID_Y } from '../../src/config/dimensions';
+import { BURST_MS } from '../../src/entities/Burst';
 
 let physics: PhysicsWorld;
 afterEach(() => physics.destroy());
@@ -74,5 +75,24 @@ describe('Puck — retournement (mauvais palet)', () => {
     p.syncView(0);
     expect(p.view.position.x).toBeCloseTo(300, 6);
     expect(p.view.position.y).toBeCloseTo(1150, 6);
+  });
+});
+
+describe('Puck — éclat du chiffre', () => {
+  it('flash() fait gonfler le chiffre puis le ramène à la normale', () => {
+    physics = createPhysicsWorld();
+    const p = createPuck(physics, { x: 360, y: 900 });
+    p.setLabel(42);
+    expect(p.isFlashing()).toBe(false);
+    p.flash();
+    expect(p.isFlashing()).toBe(true);
+    p.syncView(BURST_MS * 0.25);
+    expect(labelText(p.view).scale.x).toBeGreaterThan(1.3);
+    expect(p.view.getChildByLabel('burst', true)!.visible).toBe(true);
+    p.syncView(BURST_MS);
+    expect(p.isFlashing()).toBe(false);
+    expect(labelText(p.view).scale.x).toBe(1);
+    expect(labelText(p.view).tint).toBe(0xffffff);
+    expect(p.view.getChildByLabel('burst', true)!.visible).toBe(false);
   });
 });
