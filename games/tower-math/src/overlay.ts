@@ -52,12 +52,16 @@ export function createOverlay(
     'font:400 22px system-ui,sans-serif;background:rgba(255,255,255,0.12);color:#fff;';
   settings.addEventListener('click', () => handlers.onSettings());
 
+  // Écart unique (suit la hauteur de l'écran) : entre le cadre du calcul et le
+  // 1er résultat comme entre deux résultats.
+  const CHOICES_GAP = 'clamp(10px,4.5vh,32px)';
+
   // Panneau quiz (bord droit) : le calcul en haut, les 5 résultats juste dessous.
   const quizPanel = document.createElement('div');
   quizPanel.dataset.test = 'tower-quiz';
   quizPanel.style.cssText =
     'position:absolute;top:16px;bottom:16px;right:16px;z-index:5;display:flex;' +
-    'flex-direction:column;gap:6px;align-items:stretch;width:min(220px,40vw);' +
+    `flex-direction:column;gap:${CHOICES_GAP};align-items:stretch;width:min(220px,40vw);` +
     'pointer-events:none;';
 
   const calc = document.createElement('div');
@@ -72,7 +76,7 @@ export function createOverlay(
   choices.dataset.test = 'tower-choices';
   choices.style.cssText =
     'display:flex;flex-direction:column;justify-content:flex-start;align-items:center;' +
-    'gap:clamp(10px,4.5vh,32px);padding-top:clamp(4px,2vh,16px);';
+    `gap:${CHOICES_GAP};`;
 
   // Boutons étroits et hauts (taille, texte et espacement suivent la hauteur de
   // l'écran) : les 5 tiennent en paysage sur téléphone (~320 px de haut).
