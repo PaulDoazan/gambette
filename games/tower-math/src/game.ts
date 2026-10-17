@@ -4,7 +4,7 @@ import { createTowerEngine } from './engine';
 import { createQuestionFeed, formatCalc, formatSolved } from './questionFeed';
 import { loadRecord, saveRecord } from './record';
 import { createScene } from './scene';
-import { createOverlay } from './overlay';
+import { createOverlay, type GameOverReason } from './overlay';
 
 export const GAME_KEY = 'tower-math';
 const GAMEOVER_DELAY_MS = 900; // laisse voir la chute avant l'écran de fin
@@ -66,14 +66,14 @@ export function mountTowerMath(el: HTMLElement, ctx: GameContext): GameInstance 
   }
 
   // Raté ou mauvais résultat : le pavé courant chute, puis onGameOver + écran rejouer.
-  function endGame(): void {
+  function endGame(reason: GameOverReason): void {
     scene.dropCurrent();
     gameOverTimer = window.setTimeout(() => {
       if (disposed) return;
       const score = engine.score;
       commitRecord();
       ctx.onGameOver?.({ score });
-      overlay.showGameOver(score);
+      overlay.showGameOver(score, reason);
       transitioning = false;
     }, GAMEOVER_DELAY_MS);
   }
@@ -83,14 +83,15 @@ export function mountTowerMath(el: HTMLElement, ctx: GameContext): GameInstance 
     transitioning = true; // verrou : spawn du pavé suivant
 
     if (question.choices[slot] !== question.answer) {
-      engine.fail(); // mauvais résultat → défaite, même rendu qu'un raté
-      endGame();
+      engine.fail(); // mauvais résultat → défaite : le pavé chute comme sur un raté
+      overlay.markChoices(slot, question.choices.indexOf(question.answer));
+      endGame({ title: 'Mauvaise réponse', detail: formatSolved(question) });
       return;
     }
 
     const result = engine.slice(scene.currentPositionOnAxis());
     if (result.type === 'missed') {
-      endGame();
+      endGame({ title: 'Raté ! Le bloc est tombé à côté.' });
       return;
     }
 

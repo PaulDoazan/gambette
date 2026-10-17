@@ -6,10 +6,17 @@ export interface TowerOverlay {
   setScore(n: number): void; // pastille Score+Record bas-gauche
   setRecord(n: number): void;
   setCalc(text: string): void; // calcul à résoudre, au-dessus des boutons
-  setChoices(labels: readonly string[]): void; // 5 boutons haut-droite
-  showGameOver(score: number): void;
+  setChoices(labels: readonly string[]): void; // 5 boutons haut-droite (efface le marquage)
+  markChoices(wrongSlot: number, rightSlot: number): void; // mauvais résultat : rouge / vert
+  showGameOver(score: number, reason: GameOverReason): void;
   hideGameOver(): void;
   dispose(): void;
+}
+
+/** Pourquoi la partie s'arrête, affiché au-dessus du score. */
+export interface GameOverReason {
+  title: string; // « Mauvaise réponse » / « Raté ! »
+  detail?: string; // correction : « 6 × 7 = 42 »
 }
 
 export interface OverlayHandlers {
@@ -60,14 +67,16 @@ export function createOverlay(
     'background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.5);';
 
   // Boutons compacts : 5 doivent tenir en paysage sur téléphone (~360 px de haut).
+  const CHOICE_CSS =
+    'padding:6px 18px;border:none;border-radius:8px;cursor:pointer;' +
+    'font:700 17px system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;' +
+    'transition:background-color 120ms,color 120ms;';
   const buttons: HTMLButtonElement[] = [];
   for (let slot = 0; slot < CHOICES_COUNT; slot++) {
     const btn = document.createElement('button');
     btn.dataset.test = 'tower-choice';
     btn.type = 'button';
-    btn.style.cssText =
-      'padding:6px 18px;border:none;border-radius:8px;cursor:pointer;' +
-      'font:700 17px system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;';
+    btn.style.cssText = CHOICE_CSS;
     // Réponse dès l'appui (souris ou doigt) : le timing du pavé compte, attendre
     // le relâcher du clic le décalerait. Le clic qui suit est ignoré ; seul le
     // clic clavier (Entrée/Espace, detail 0) répond encore par 'click'.
@@ -87,6 +96,12 @@ export function createOverlay(
     'position:absolute;inset:0;z-index:10;display:none;flex-direction:column;' +
     'align-items:center;justify-content:center;gap:16px;background:rgba(10,10,26,0.85);' +
     'color:#fff;font-family:system-ui,sans-serif;text-align:center;';
+  const reasonTitle = document.createElement('div');
+  reasonTitle.dataset.test = 'tower-gameover-reason';
+  reasonTitle.style.cssText = 'font-size:1.6rem;font-weight:800;color:#FF7D6D;';
+  const reasonDetail = document.createElement('div');
+  reasonDetail.dataset.test = 'tower-gameover-correction';
+  reasonDetail.style.cssText = 'font-size:1.3rem;font-weight:700;color:#4ADE80;';
   const finalScore = document.createElement('div');
   finalScore.style.cssText = 'font-size:2rem;font-weight:700;';
   const replayBtn = document.createElement('button');
@@ -97,7 +112,7 @@ export function createOverlay(
     'padding:12px 32px;border:none;border-radius:8px;cursor:pointer;' +
     'font:700 18px system-ui,sans-serif;background:#fff;color:#1a1a2e;';
   replayBtn.addEventListener('click', () => handlers.onReplay());
-  gameOver.append(finalScore, replayBtn);
+  gameOver.append(reasonTitle, reasonDetail, finalScore, replayBtn);
 
   // Portrait mobile : on bloque le jeu et on demande le mode paysage.
   const rotate = document.createElement('div');
@@ -130,9 +145,33 @@ export function createOverlay(
     setChoices(labels: readonly string[]): void {
       buttons.forEach((btn, i) => {
         btn.textContent = labels[i] ?? '';
+        delete btn.dataset.state;
+        btn.style.cssText = CHOICE_CSS;
       });
     },
-    showGameOver(scoreValue: number): void {
+    markChoices(wrongSlot: number, rightSlot: number): void {
+      const wrongBtn = buttons[wrongSlot];
+      const rightBtn = buttons[rightSlot];
+      if (rightBtn) {
+        rightBtn.dataset.state = 'right';
+        rightBtn.style.background = '#22C55E';
+        rightBtn.style.color = '#fff';
+      }
+      if (wrongBtn) {
+        wrongBtn.dataset.state = 'wrong';
+        wrongBtn.style.background = '#E5484D';
+        wrongBtn.style.color = '#fff';
+        // Secousse (absente de jsdom : animate optionnel).
+        wrongBtn.animate?.(
+          [0, -8, 8, -6, 6, -3, 0].map((x) => ({ transform: `translateX(${x}px)` })),
+          { duration: 360, easing: 'ease-out' },
+        );
+      }
+    },
+    showGameOver(scoreValue: number, reason: GameOverReason): void {
+      reasonTitle.textContent = reason.title;
+      reasonDetail.textContent = reason.detail ?? '';
+      reasonDetail.style.display = reason.detail ? '' : 'none';
       finalScore.textContent = `Score : ${scoreValue}`;
       gameOver.style.display = 'flex';
     },
