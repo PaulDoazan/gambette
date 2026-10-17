@@ -52,8 +52,7 @@ export function createOverlay(
     'font:400 22px system-ui,sans-serif;background:rgba(255,255,255,0.12);color:#fff;';
   settings.addEventListener('click', () => handlers.onSettings());
 
-  // Panneau quiz (bord droit, toute la hauteur) : le calcul en haut, puis les
-  // 5 résultats centrés verticalement dans la hauteur restante.
+  // Panneau quiz (bord droit) : le calcul en haut, les 5 résultats juste dessous.
   const quizPanel = document.createElement('div');
   quizPanel.dataset.test = 'tower-quiz';
   quizPanel.style.cssText =
@@ -72,15 +71,15 @@ export function createOverlay(
   const choices = document.createElement('div');
   choices.dataset.test = 'tower-choices';
   choices.style.cssText =
-    'flex-grow:1;display:flex;flex-direction:column;justify-content:center;' +
-    'align-items:center;gap:clamp(6px,3.5vh,24px);min-height:0;';
+    'display:flex;flex-direction:column;justify-content:flex-start;align-items:center;' +
+    'gap:clamp(10px,4.5vh,32px);padding-top:clamp(4px,2vh,16px);';
 
-  // Boutons étroits et hauts (hauteur et espacement suivent l'écran) : les 5
-  // tiennent en paysage sur téléphone (~360 px de haut).
+  // Boutons étroits et hauts (taille, texte et espacement suivent la hauteur de
+  // l'écran) : les 5 tiennent en paysage sur téléphone (~320 px de haut).
   const CHOICE_CSS =
     'width:min(130px,70%);height:clamp(32px,10vh,64px);padding:0 12px;flex-shrink:0;' +
     'border:none;border-radius:10px;cursor:pointer;pointer-events:auto;' +
-    'font:700 20px system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;' +
+    'font:700 clamp(22px,4.5vh,30px) system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;' +
     'transition:background-color 120ms,color 120ms;';
   const buttons: HTMLButtonElement[] = [];
   for (let slot = 0; slot < CHOICES_COUNT; slot++) {
