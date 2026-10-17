@@ -1,5 +1,5 @@
 export const COLORS = {
-  table: 0x2e7d4f, // tapis vert
+  table: 0x4caf6a, // tapis vert clair
   rim: 0x8a5a2c,
   divider: 0x6b4423,
   puck: 0xdcb27a, // bois clair
