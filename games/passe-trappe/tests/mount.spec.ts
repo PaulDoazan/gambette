@@ -249,12 +249,13 @@ describe('réglages', () => {
     expect(gear.style.width).toBe('40px');
     expect(gear.style.height).toBe('40px');
     expect(gear.style.borderRadius).toBe('999px');
-    // Icône SVG (pas un caractère : centrage exact, sans dépendre de la police), qui remplit
-    // la hauteur de la cloison, sans contour ni fond.
+    // Icône SVG (pas un caractère : centrage exact, sans dépendre de la police) au trait fin,
+    // comme le symbole ⚙ d'origine, dans un bouton de la hauteur de la cloison, sans fond.
     const svg = gear.querySelector('svg')!;
-    expect(svg.getAttribute('viewBox')).toBe('2 2 20 20'); // cadré sur l'engrenage, centré
-    expect(svg.getAttribute('width')).toBe('40');
-    expect(svg.getAttribute('height')).toBe('40');
+    expect(svg.getAttribute('fill')).toBe('none');
+    expect(svg.getAttribute('stroke-width')).toBe('2');
+    expect(Number(svg.getAttribute('width'))).toBeLessThanOrEqual(30);
+    expect(gear.style.height).toBe('40px');
     expect(gear.style.display).toBe('flex');
     expect(gear.style.alignItems).toBe('center');
     expect(gear.style.justifyContent).toBe('center');
