@@ -12,9 +12,14 @@ const DIFFICULTY_RANGES: Record<Difficulty, Range> = {
   hard: { min: 1, max: 5 },
 };
 
+// Réponses ≤ 1 (soustractions) : sans candidats plus petits, la réponse serait
+// la seule valeur < 2 (ou la seule négative), trouvable sans calculer.
+const SMALL_ANSWER = 1;
+
 const candidatesIn = (answer: number, range: Range): number[] => {
   const out: number[] = [];
-  for (let v = 2; v <= 100; v++) {
+  const low = answer <= SMALL_ANSWER ? answer - range.max : 2;
+  for (let v = low; v <= 100; v++) {
     if (v === answer) continue;
     const dist = Math.abs(v - answer);
     if (dist >= range.min && dist <= range.max) out.push(v);
@@ -28,6 +33,15 @@ const ensureNeighbour = (answer: number, picks: number[], pool: number[]): numbe
   if (neighbours.length === 0) return picks;
   const replaced = picks.slice();
   replaced[0] = neighbours[0] as number;
+  return replaced;
+};
+
+const ensureBelow = (answer: number, picks: number[], pool: number[], rng: Rng): number[] => {
+  if (answer > SMALL_ANSWER || picks.length === 0 || picks.some((p) => p < answer)) return picks;
+  const below = pool.filter((v) => v < answer);
+  if (below.length === 0) return picks;
+  const replaced = picks.slice();
+  replaced[replaced.length - 1] = below[Math.floor(rng() * below.length)] as number;
   return replaced;
 };
 
@@ -53,6 +67,6 @@ export function generateDistractors(
   if (pool.length < count) {
     console.warn(`Not enough distractors for answer=${answer} difficulty=${difficulty}`);
   }
-  const picks = shuffle(pool, rng).slice(0, count);
+  const picks = ensureBelow(answer, shuffle(pool, rng).slice(0, count), pool, rng);
   return difficulty === 'hard' ? ensureNeighbour(answer, picks, pool) : picks;
 }

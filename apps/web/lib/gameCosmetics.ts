@@ -17,6 +17,11 @@ const BY_KEY: Record<string, GameCosmetic> = {
     icon: 'mdi-rabbit',
     traits: ['calcul', 'adresse'],
   },
+  'tower-math': {
+    color: 'tertiary',
+    icon: 'mdi-cube-outline',
+    traits: ['calcul', 'réflexes'],
+  },
 };
 
 // Pour tout jeu sans habillage dédié : rotation déterministe sur la charte.
