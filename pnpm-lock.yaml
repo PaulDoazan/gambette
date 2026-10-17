@@ -136,10 +136,10 @@ importers:
     dependencies:
       '@gambette/game-sdk':
         specifier: workspace:*
-        version: link:../game-sdk
+        version: link:../../packages/game-sdk
       '@gambette/math-sdk':
         specifier: workspace:*
-        version: link:../math-sdk
+        version: link:../../packages/math-sdk
       cannon-es:
         specifier: ^0.20.0
         version: 0.20.0
