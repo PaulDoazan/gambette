@@ -61,7 +61,7 @@ const addBox = (
 const segmentWidth = (DESIGN_WIDTH - GAP_WIDTH) / 2;
 
 /** Pointillés de la zone interdite au glisser : longueur d'un tiret et d'un espace (px). */
-const DASH = { on: 16, off: 26, width: 8 } as const;
+const DASH = { on: 16, off: 26, width: 12 } as const;
 
 /** Demi-cercle en pointillés autour du passage, côté `player` (A : vers le bas, B : vers le haut). */
 const drawNoDragZone = (g: Graphics, player: Player): void => {
@@ -77,7 +77,7 @@ const drawNoDragZone = (g: Graphics, player: Player): void => {
     g.moveTo(cx + r * Math.cos(a), MID_Y + sign * r * Math.sin(a));
     g.arc(cx, MID_Y, r, sign * a, sign * b, sign < 0);
   }
-  g.stroke({ width: DASH.width, color: 0xffffff, alpha: 0.55, cap: 'round' });
+  g.stroke({ width: DASH.width, color: 0xffffff, alpha: 0.8, cap: 'round' });
 };
 
 const draw = (g: Graphics): void => {
