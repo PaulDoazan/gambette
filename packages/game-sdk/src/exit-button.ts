@@ -42,11 +42,17 @@ function fullscreenAvailable(el: FsElement): boolean {
  * `opts.fullscreen: false` désactive ce bouton (jeu qui fournit le sien).
  * `opts.placement: 'side'` place le bouton sur le bord gauche, centré
  * verticalement (jeux dont le haut d'écran est une zone de jeu).
+ * `opts.fullscreenParent` place le bouton plein écran dans ce conteneur au lieu
+ * de le coller à « Quitter » (il reste masqué/affiché avec lui par setHidden).
  */
 export function createExitButton(
   parent: HTMLElement,
   onExit: () => void,
-  opts: { fullscreen?: boolean | 'always'; placement?: 'top' | 'side' } = {},
+  opts: {
+    fullscreen?: boolean | 'always';
+    placement?: 'top' | 'side';
+    fullscreenParent?: HTMLElement;
+  } = {},
 ): ExitButton {
   const wrap = document.createElement('div');
   const position =
@@ -102,6 +108,7 @@ export function createExitButton(
   // écran PERSISTE quand le jeu est démonté (retour au briefing et
   // aux autres écrans de l'app), au lieu d'être annulé avec son élément.
   let detachFullscreen: (() => void) | null = null;
+  let fsButton: HTMLButtonElement | null = null;
   const target = document.documentElement as FsElement;
   const mode = opts.fullscreen ?? true;
   const wanted = mode === 'always' || (mode === true && isMobile());
@@ -141,8 +148,10 @@ export function createExitButton(
       doc.removeEventListener('webkitfullscreenchange', sync);
     };
 
-    // Juste à côté du bouton quitter.
-    wrap.insertBefore(fsBtn, confirm);
+    // Juste à côté du bouton quitter, sauf conteneur dédié.
+    if (opts.fullscreenParent) opts.fullscreenParent.appendChild(fsBtn);
+    else wrap.insertBefore(fsBtn, confirm);
+    fsButton = fsBtn;
   }
 
   parent.appendChild(wrap);
@@ -152,9 +161,11 @@ export function createExitButton(
     setHidden(hidden: boolean): void {
       if (hidden) setConfirm(false);
       wrap.style.display = hidden ? 'none' : shownDisplay;
+      if (fsButton && opts.fullscreenParent) fsButton.style.display = hidden ? 'none' : 'flex';
     },
     dispose(): void {
       detachFullscreen?.();
+      fsButton?.remove();
       wrap.remove();
     },
   };

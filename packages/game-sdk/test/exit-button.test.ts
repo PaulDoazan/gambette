@@ -122,6 +122,35 @@ describe('createExitButton — option fullscreen', () => {
   });
 });
 
+describe('createExitButton — option fullscreenParent', () => {
+  it('place le bouton plein écran dans le conteneur fourni, pas à côté de quitter', () => {
+    setPointer(true);
+    setFullscreenApi(true);
+    const parent = document.createElement('div');
+    const elsewhere = document.createElement('div');
+    const btn = createExitButton(parent, () => {}, { fullscreenParent: elsewhere });
+    expect(parent.querySelector(fsSelector)).toBeNull();
+    expect(elsewhere.querySelector(fsSelector)).not.toBeNull();
+    btn.dispose();
+    expect(elsewhere.querySelector(fsSelector)).toBeNull();
+  });
+
+  it('setHidden masque aussi le bouton plein écran déplacé', () => {
+    setPointer(true);
+    setFullscreenApi(true);
+    const elsewhere = document.createElement('div');
+    const btn = createExitButton(document.createElement('div'), () => {}, {
+      fullscreenParent: elsewhere,
+    });
+    const fs = elsewhere.querySelector<HTMLElement>(fsSelector)!;
+    btn.setHidden(true);
+    expect(fs.style.display).toBe('none');
+    btn.setHidden(false);
+    expect(fs.style.display).not.toBe('none');
+    btn.dispose();
+  });
+});
+
 describe('createExitButton — placement', () => {
   it('top par défaut : centré en haut', () => {
     const parent = document.createElement('div');
