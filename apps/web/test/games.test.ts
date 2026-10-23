@@ -23,7 +23,16 @@ describe('registre de jeux', () => {
 describe('registre de jeux — passe-trappe', () => {
   it('contient passe-trappe avec une consigne, après rabbit-math', () => {
     const keys = registry.list().map((m) => m.meta.key);
-    expect(keys).toEqual(['rabbit-math', 'passe-trappe', 'tower-math']);
+    expect(keys).toEqual(['rabbit-math', 'passe-trappe', 'tower-math', 'math-river']);
     expect(registry.get('passe-trappe')!.meta.instructions.length).toBeGreaterThan(0);
+  });
+});
+
+describe('registre de jeux — math-river', () => {
+  it('contient math-river avec une consigne, en dernier', () => {
+    const game = registry.get('math-river');
+    expect(game).toBeDefined();
+    expect(game!.meta.name).toBe('Math River');
+    expect(game!.meta.instructions.length).toBeGreaterThan(0);
   });
 });

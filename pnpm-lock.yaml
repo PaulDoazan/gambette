@@ -29,6 +29,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@gambette/game-math-river':
+        specifier: workspace:*
+        version: link:../../games/math-river
       '@gambette/game-passe-trappe':
         specifier: workspace:*
         version: link:../../games/passe-trappe

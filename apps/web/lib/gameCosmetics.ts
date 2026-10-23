@@ -27,6 +27,11 @@ const BY_KEY: Record<string, GameCosmetic> = {
     icon: 'mdi-cube-outline',
     traits: ['calcul', 'réflexes'],
   },
+  'math-river': {
+    color: 'secondary',
+    icon: 'mdi-fish',
+    traits: ['calcul', '2 joueurs', 'coopératif'],
+  },
 };
 
 // Pour tout jeu sans habillage dédié : rotation déterministe sur la charte.
