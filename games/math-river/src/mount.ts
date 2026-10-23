@@ -181,8 +181,12 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
     app.stage.on('globalpointermove', move);
     app.stage.on('pointerup', up);
     app.stage.on('pointerupoutside', up);
-    app.stage.on('pointercancel', up);
     cleanups.push(() => app.stage.removeAllListeners());
+    // Pixi 8 ne relaie pas le pointercancel natif : sans lui, un doigt annulé par le système
+    // garderait son seau et bloquerait le joueur.
+    const cancel = (e: PointerEvent): void => game?.pointerCancel(e.pointerId);
+    app.canvas.addEventListener('pointercancel', cancel);
+    cleanups.push(() => app.canvas.removeEventListener('pointercancel', cancel));
 
     cleanups.push(installOrientationLock(el, 'portrait'));
     const exit = createExitButton(el, () => ctx.onExit(), {

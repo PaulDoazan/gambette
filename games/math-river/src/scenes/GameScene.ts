@@ -32,6 +32,8 @@ export interface GameScene {
   pointerDown(id: number, p: Vec): void;
   pointerMove(id: number, p: Vec): void;
   pointerUp(id: number): void;
+  /** Doigt annulé par le système (geste, appel…) : le seau revient sans tirer. */
+  pointerCancel(id: number): void;
   /** Relâche les seaux tenus sans tirer (réglages ouverts, fin de partie). */
   releaseAll(): void;
   calc(player: Player): Pair;
@@ -240,6 +242,11 @@ export function createGameScene(deps: {
       const pl = router.owner(id);
       router.end(id);
       if (pl) release(pl);
+    },
+    pointerCancel: (id) => {
+      const pl = router.owner(id);
+      router.end(id);
+      if (pl) drop(pl);
     },
     releaseAll,
     calc: (pl) => sides[pl].calc,

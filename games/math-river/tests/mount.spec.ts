@@ -45,6 +45,7 @@ interface FakeScene {
   pointerDown: Fn;
   pointerMove: Fn;
   pointerUp: Fn;
+  pointerCancel: Fn;
   releaseAll: Fn;
   tick: Fn;
   reset: Fn;
@@ -61,6 +62,7 @@ vi.mock('../src/scenes/GameScene', () => ({
       pointerDown: vi.fn(),
       pointerMove: vi.fn(),
       pointerUp: vi.fn(),
+      pointerCancel: vi.fn(),
       releaseAll: vi.fn(),
       tick: vi.fn(),
       reset: vi.fn(),
@@ -140,6 +142,19 @@ describe('mathRiver.mount / unmount', () => {
     el.querySelector<HTMLButtonElement>('[data-test="game-exit-go"]')!.click();
     expect(c.onExit).toHaveBeenCalledTimes(1);
     instance.unmount();
+  });
+
+  it('pointercancel natif du canvas (que Pixi ne relaie pas) → pointerCancel ; retiré au unmount', async () => {
+    const el = document.createElement('div');
+    const instance = await mathRiver.mount(el, ctx());
+    const canvas = fakeApps[0]!.canvas;
+    const cancel = new Event('pointercancel') as Event & { pointerId: number };
+    Object.defineProperty(cancel, 'pointerId', { value: 7 });
+    canvas.dispatchEvent(cancel);
+    expect(scene0().pointerCancel).toHaveBeenCalledWith(7);
+    instance.unmount();
+    canvas.dispatchEvent(cancel);
+    expect(scene0().pointerCancel).toHaveBeenCalledTimes(1);
   });
 
   it('deux cycles mount/unmount sans écouteur window résiduel', async () => {

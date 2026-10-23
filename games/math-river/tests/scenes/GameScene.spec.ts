@@ -154,6 +154,18 @@ describe('GameScene', () => {
     expect(onWin).toHaveBeenCalledTimes(1);
   });
 
+  it('doigt annulé par le système : le seau revient sans tirer et le joueur peut rejouer', () => {
+    const { scene } = make();
+    const i = scene.correctIndex('A');
+    scene.pointerDown(1, bucketHome('A', i));
+    scene.pointerMove(1, gripFor('A', i, holeCenter()));
+    scene.pointerCancel(1);
+    expect(scene.buckets('A')[i]!.empty).toBe(false);
+    expect(scene.buckets('A')[i]!.position).toEqual(bucketHome('A', i));
+    throwBucket(scene, 'A', i, holeCenter());
+    expect(scene.buckets('A')[i]!.empty).toBe(true);
+  });
+
   it('releaseAll : le seau tenu revient sans tirer', () => {
     const { scene } = make();
     const i = scene.correctIndex('A');
