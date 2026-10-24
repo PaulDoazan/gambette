@@ -10,8 +10,6 @@ export const STRUGGLE_LEVEL = 0.4;
 
 /** Durée du vol de l'eau (ms) pour une portée donnée (px). */
 export const flightMs = (range: number): number => 500 + 0.5 * range;
-/** Durée de l'évasion du poisson par le canal, avant l'écran de victoire. */
-export const ESCAPE_MS = 2200;
 /** Durée du vidage d'un mauvais seau sur place, et de la vie d'une flaque. */
 export const SPILL_MS = 500;
 export const PUDDLE_MS = 1400;
