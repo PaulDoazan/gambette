@@ -2,7 +2,12 @@ import { Container, Graphics } from 'pixi.js';
 import { DESIGN_WIDTH, MID_Y } from '../config/dimensions';
 import { ESCAPE_MS, STRUGGLE_LEVEL } from '../config/water';
 import { COLORS } from '../config/theme';
+import { channelCenter, channelHeading } from '../domain/channel';
 import type { Vec } from '../domain/types';
+
+/** Entrée du canal (au bord du trou) et point de sortie, au-delà du bord droit. */
+const GATE_T = 0.12;
+const OUT_T = 1.4;
 
 export interface Fish {
   readonly view: Container;
@@ -61,11 +66,11 @@ export function createFish(): Fish {
       clock += dtMs;
       splashes.clear();
       if (escape) {
-        // Vers l'entrée du canal (premier tiers), puis tout droit jusqu'au-delà du bord droit.
+        // Vers l'entrée du canal (premier tiers), puis le long de ses méandres jusqu'au-delà du
+        // bord droit.
         escape.elapsed += dtMs;
         const t = Math.min(1, escape.elapsed / ESCAPE_MS);
-        const gate = { x: cx + waterR, y: cy };
-        const out = { x: DESIGN_WIDTH + 80, y: cy };
+        const gate = channelCenter(GATE_T);
         const wiggle = Math.sin(clock / 70) * 0.12;
         if (t < 1 / 3) {
           const u = t * 3;
@@ -75,8 +80,9 @@ export function createFish(): Fish {
           };
           place(p, Math.atan2(gate.y - escape.from.y, gate.x - escape.from.x), wiggle);
         } else {
-          const u = (t - 1 / 3) * 1.5;
-          place({ x: gate.x + (out.x - gate.x) * u, y: cy }, 0, wiggle);
+          const s = GATE_T + (t - 1 / 3) * 1.5 * (OUT_T - GATE_T);
+          if (s <= 1) place(channelCenter(s), channelHeading(s), wiggle);
+          else place({ x: DESIGN_WIDTH + (s - 1) * 200, y: channelCenter(1).y }, 0, wiggle);
         }
         if (t >= 1 && !escape.done) {
           escape.done = true;
