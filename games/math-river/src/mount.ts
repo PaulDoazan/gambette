@@ -93,6 +93,9 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
     const startGame = (): void => {
       game = createGameScene({
         pairs: settings.selectedPairs,
+        // Fin de manche : le bandeau s'efface avec les seaux et revient avec eux (aucun tap ne
+        // précède son retour, pas besoin de délai).
+        onUiHidden: (hidden) => (hidden ? hideExit() : setButtonsHidden(false)),
         onWin: () => {
           // L'écran de victoire a son propre « Quitter » : celui du SDK le chevaucherait.
           hideExit();

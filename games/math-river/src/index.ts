@@ -5,12 +5,13 @@ export const mathRiver: GameModule = {
   meta: {
     key: 'math-river',
     name: 'Math River',
-    description: 'Un jeu à deux, en équipe : remplissez le trou pour libérer le poisson !',
+    description: 'Un jeu à deux, en équipe : de trou en trou, menez le poisson jusqu’à la mer !',
     instructions:
       'Posez le téléphone entre vous, chacun face à ses seaux. Résolvez votre calcul et tirez ' +
       'le seau qui porte la bonne réponse vers vous, puis relâchez pour lancer l’eau dans le ' +
       'trou : un mauvais seau se renverse sur place ! L’eau s’infiltre dans le sable, alors ' +
-      'remplissez vite, à deux : quand elle atteint le canal, le poisson est sauvé.',
+      'remplissez vite, à deux : quand elle atteint le canal, le poisson file vers un trou plus ' +
+      'grand. Au bout du troisième, c’est la mer !',
   },
   mount: mountMathRiver,
 };
