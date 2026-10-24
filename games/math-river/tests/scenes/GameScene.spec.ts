@@ -3,13 +3,8 @@ import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
 import { createGameScene, bucketHome } from '../../src/scenes/GameScene';
 import { holeCenter } from '../../src/domain/aim';
 import { MAX_RANGE, MAX_STRETCH } from '../../src/config/dimensions';
-import {
-  ESCAPE_MS,
-  MIN_LEVEL,
-  START_LEVEL,
-  WATER_PER_BUCKET,
-  flightMs,
-} from '../../src/config/water';
+import { ESCAPE_MS, MIN_LEVEL, START_LEVEL, flightMs } from '../../src/config/water';
+import { ROUNDS } from '../../src/config/rounds';
 import type { Player, Vec } from '../../src/domain/types';
 
 const PAIRS: Pair[] = [
@@ -46,6 +41,7 @@ const wrongIndex = (scene: Scene, pl: Player): number => (scene.correctIndex(pl)
 const run = (scene: Scene, ms: number): void => {
   for (let t = 0; t < ms; t += 16) scene.tick(16);
 };
+const WATER_PER_BUCKET = ROUNDS[0]!.perBucket;
 const MAX_FLIGHT = flightMs(MAX_RANGE) + 50;
 
 describe('GameScene', () => {
@@ -67,7 +63,7 @@ describe('GameScene', () => {
     expect(scene.buckets('A')[scene.correctIndex('A')]!.empty).toBe(true);
     expect(scene.level()).toBe(START_LEVEL); // encore en vol
     run(scene, MAX_FLIGHT);
-    expect(scene.level()).toBeGreaterThan(START_LEVEL + WATER_PER_BUCKET - 0.05);
+    expect(scene.level()).toBeGreaterThan(START_LEVEL + WATER_PER_BUCKET - 0.01);
     expect(scene.calc('A')).not.toBe(before);
     expect(scene.buckets('A').every((b) => !b.empty)).toBe(true);
   });
@@ -127,7 +123,7 @@ describe('GameScene', () => {
     scene.pointerUp(1);
     scene.pointerUp(2);
     run(scene, MAX_FLIGHT);
-    expect(scene.level()).toBeGreaterThan(START_LEVEL + 2 * WATER_PER_BUCKET - 0.05);
+    expect(scene.level()).toBeGreaterThan(START_LEVEL + 2 * WATER_PER_BUCKET - 0.02);
   });
 
   it('sans tir, le trou ne se vide jamais sous le plancher', () => {
@@ -138,7 +134,7 @@ describe('GameScene', () => {
 
   it('eau au niveau du canal : plus de tir, le poisson s’échappe, puis onWin une seule fois', () => {
     const { scene, onWin } = make();
-    for (let k = 0; k < 10 && scene.level() < 1; k++) {
+    for (let k = 0; k < 40 && scene.level() < 1; k++) {
       const pl: Player = k % 2 ? 'B' : 'A';
       throwBucket(scene, pl, scene.correctIndex(pl), holeCenter());
       run(scene, MAX_FLIGHT);

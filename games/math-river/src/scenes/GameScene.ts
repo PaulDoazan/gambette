@@ -7,6 +7,7 @@ import {
   DESIGN_HEIGHT,
   bucketX,
 } from '../config/dimensions';
+import { ROUNDS } from '../config/rounds';
 import { START_LEVEL, flightMs } from '../config/water';
 import { aimFrom, clampGrip, inHole, type Aim } from '../domain/aim';
 import { labelBuckets, pickCalc } from '../domain/quiz';
@@ -83,7 +84,7 @@ export function createGameScene(deps: {
   const rng = deps.rng ?? Math.random;
   const view = new Container();
   const beach = createBeach();
-  const water = createWater();
+  const water = createWater(ROUNDS[0]!);
   const pool = createPool(START_LEVEL);
   const fish = createFish();
   const ground = new Container(); // flaques, sous les seaux
