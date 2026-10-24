@@ -95,6 +95,7 @@ seaux pour être rempli.
   6. De nouveaux calculs sont tirés, puis l'interface réapparaît en ≈ 300 ms.
 
   Tant que l'interface n'est pas entièrement revenue, les touchers sont ignorés.
+
 - **Fin de partie** : à la manche 3, le poisson nage du canal jusque dans la mer. Ensuite, l'écran
   de victoire actuel s'affiche (« Le poisson est sauvé ! »). Ce point est ma supposition.
   « Rejouer » ramène la caméra et l'eau à la manche 1.

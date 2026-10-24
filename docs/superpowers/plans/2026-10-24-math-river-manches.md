@@ -5,6 +5,7 @@
 **Goal:** Enchaîner trois manches dans trois trous de plus en plus grands, reliés par des canaux, avec une caméra qui suit le poisson, jusqu'à la mer.
 
 **Architecture:**
+
 - Un « monde » Pixi de trois écrans côte à côte (largeur 3 × 720) contient le sable, les trous, l'eau, les canaux, la mer et le poisson. La caméra est `world.x = -cameraX`.
 - Les seaux, les calculs, les visées, les flaques et l'eau en vol forment une couche d'interface fixe à l'écran. Elle s'efface pendant les transitions.
 - La scène de jeu porte une petite machine à états (`playing` → `leaving` → `arriving` → `playing`, puis `finale`) et prévient le montage via `onUiHidden(hidden)`. Le montage masque ou réaffiche alors le bandeau DOM.
@@ -38,11 +39,13 @@
 ### Task 1: Paramètres des manches et eau paramétrable
 
 **Files:**
+
 - Create: `src/config/rounds.ts`
 - Modify: `src/config/water.ts` (retirer `WATER_PER_BUCKET` et `DRAIN_PER_SECOND`), `src/domain/water.ts`
 - Test: `tests/config/rounds.spec.ts`, `tests/domain/water.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `interface RoundSpec { holeRadius: number; perBucket: number; drainPerSecond: number }`
   - `ROUNDS: readonly RoundSpec[]` (3 manches)
@@ -65,10 +68,12 @@
 ### Task 2: Canaux entre trous et vers la mer
 
 **Files:**
+
 - Modify: `src/domain/channel.ts` (réécriture)
 - Test: `tests/domain/channel.spec.ts` (réécriture)
 
 **Interfaces:**
+
 - Consumes: `ROUNDS`, `holeCenterOf`.
 - Produces:
   - `interface Channel { center(t): Vec; halfWidth(t): number; heading(t): number; outline(extra: number, from?: number, to?: number): number[]; bank(side: 1|-1): number[] }`, en coordonnées du monde, avec t ∈ [0, 1].
@@ -77,6 +82,7 @@
   - `channelBoundaryT(k): number` : t où le canal franchit la frontière d'écran (k = 0, 1).
 
 **Tracé :**
+
 - Le canal part de `holeCenterOf(k).x + R_k - 24` et arrive à `holeCenterOf(k+1).x - R_{k+1} + 24`. Pour k = 2, il arrive à `SEA_SHORE_X() + 40`.
 - x varie linéairement avec t.
 - y est découpé en deux segments : du départ à la frontière, puis de la frontière à l'arrivée. Pour k = 2, il n'y a qu'un segment. Sur chaque segment, avec `v ∈ [0, 1]` : `y = MID_Y + SWAY · sin(2πv) · sin(πv)`, avec `SWAY` ≈ 50 à régler à l'œil. Cette forme est nulle et de pente nulle aux deux bouts de chaque segment.
@@ -95,11 +101,13 @@
 ### Task 3: Monde de trois écrans : sable, trous, mer, eau, poisson
 
 **Files:**
+
 - Modify: `src/entities/Beach.ts`, `src/entities/Pool.ts`, `src/entities/Fish.ts`
 - Create: `src/entities/Sea.ts`
 - Test: `tests/entities/Fish.spec.ts` (nouveau), `tests/entities/Pool.spec.ts` (nouveau)
 
 **Interfaces:**
+
 - Consumes: `channelFrom`, `ROUNDS`, `holeCenterOf`, `SEA_SHORE_X`.
 - Produces:
   - `createBeach(): { view }` : sable sur `0..3·720`, les trois trous (bourrelet, cuvette, anneaux), les trois canaux (lit, bourrelet, berges hors des trous) et des décors variés par écran, hors des zones des seaux et des calculs.
@@ -122,9 +130,11 @@
 ### Task 4: Visée selon le trou courant
 
 **Files:**
+
 - Modify: `src/domain/aim.ts`, `tests/domain/aim.spec.ts`
 
 **Interfaces:**
+
 - Produces: `inHole(p: Vec, radius = HOLE_RADIUS): boolean`, en coordonnées écran. Le trou courant est toujours au centre de l'écran quand on joue.
 
 - [ ] Test : `inHole({x: 360 + 200, y: MID_Y}, 220)` vaut vrai, et avec le rayon par défaut il vaut faux.
@@ -133,10 +143,12 @@
 ### Task 5: Manches, caméra et effacement de l'interface dans GameScene
 
 **Files:**
+
 - Modify: `src/scenes/GameScene.ts`, `src/entities/AimGuide.ts` (`onTarget` reçoit le rayon courant)
 - Test: `tests/scenes/GameScene.spec.ts`
 
 **Interfaces:**
+
 - Consumes: tout ce qui précède.
 - Produces, en plus de l'API actuelle de `createGameScene` :
   - L'option `deps.onUiHidden?(hidden: boolean)`.
@@ -145,6 +157,7 @@
   - `cameraX(): number`.
 
 **Machine à états :**
+
 - **`playing`** : comme aujourd'hui. Quand `water.full()` :
   - si `round < LAST_ROUND` → `releaseAll()`, `pool.overflow()`, `fish.escape(k, …)`, `onUiHidden(true)`, état `leaving` ;
   - sinon → même chose, puis `finale`.
@@ -172,9 +185,11 @@
 ### Task 6: Montage : bandeau masqué pendant les transitions
 
 **Files:**
+
 - Modify: `src/mount.ts`, `tests/mount.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `deps.onUiHidden`.
 
 Brancher `onUiHidden: (hidden) => (hidden ? hideExit() : setButtonsHidden(false))`. Le retour est immédiat : aucun tap ne précède le retour de l'interface, donc pas de délai `EXIT_REVEAL_DELAY_MS`. L'engrenage est inactif tant que le bandeau est masqué ; c'est déjà le cas, puisque le bandeau n'est pas affiché.
