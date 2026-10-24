@@ -38,9 +38,12 @@ const throwBucket = (scene: Scene, pl: Player, i: number, target: Vec): void => 
   scene.pointerUp(ids[pl]);
 };
 const wrongIndex = (scene: Scene, pl: Player): number => (scene.correctIndex(pl) + 1) % 5;
-/** Avance le temps par pas de 16 ms. */
-const run = (scene: Scene, ms: number): void => {
-  for (let t = 0; t < ms; t += 16) scene.tick(16);
+/**
+ * Avance le temps par pas de `step` ms (50 par défaut : chaque pas redessine tout le monde, et les
+ * parties longues doivent rester rapides en CI).
+ */
+const run = (scene: Scene, ms: number, step = 50): void => {
+  for (let t = 0; t < ms; t += step) scene.tick(step);
 };
 const WATER_PER_BUCKET = ROUNDS[0]!.perBucket;
 const MAX_FLIGHT = flightMs(MAX_RANGE) + 50;
@@ -140,7 +143,7 @@ describe('GameScene', () => {
 
   it('sans tir, le trou ne se vide jamais sous le plancher', () => {
     const { scene } = make();
-    run(scene, 120_000);
+    run(scene, 60_000, 100);
     expect(scene.level()).toBe(MIN_LEVEL);
   });
 
