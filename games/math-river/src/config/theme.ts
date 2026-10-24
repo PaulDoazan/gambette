@@ -27,4 +27,13 @@ export const COLORS = {
   calcFill: 0xfff8e5,
   calcText: 0x111111,
   miss: 0xc0392b,
+  /** Visée qui tombe dans le trou : les pointillés autour du trou passent au bleu. */
+  guideOnTarget: 0x1a56c4,
+  shell: 0xf4a98f,
+  shellAlt: 0xfbd7a8,
+  shellLine: 0xb9775e,
+  toyLine: 0x5a3a24,
+  shovelBlade: 0xe74c3c,
+  shovelHandle: 0xffcc5c,
+  rake: 0x3a8fd6,
 } as const;

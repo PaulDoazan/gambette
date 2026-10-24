@@ -1,7 +1,7 @@
 import { Graphics } from 'pixi.js';
 import { BUCKET_RADIUS } from '../config/dimensions';
 import { COLORS } from '../config/theme';
-import { flightAt, type Aim } from '../domain/aim';
+import { flightAt, inHole, type Aim } from '../domain/aim';
 import type { Vec } from '../domain/types';
 
 /** Nombre de points de l'aperçu de trajectoire. */
@@ -11,19 +11,25 @@ const PEG_SPREAD = BUCKET_RADIUS + 14;
 
 /**
  * Visée d'un joueur : place du seau en pointillés, élastique tendu de deux piquets au seau, points
- * de la cloche (taille = hauteur de l'eau) et viseur au point d'impact.
+ * de la cloche (taille = hauteur de l'eau) et viseur rond au point d'impact. `onTarget` dit si l'eau
+ * tomberait dans le trou (la scène fait alors passer au bleu les pointillés autour du trou).
  */
 export function createAimGuide(): {
   readonly view: Graphics;
   show(home: Vec, grip: Vec, aim: Aim | null): void;
   hide(): void;
+  /** La visée affichée tombe-t-elle dans le trou ? */
+  onTarget(): boolean;
 } {
   const view = new Graphics();
   view.label = 'aim';
+  let onTarget = false;
   return {
     view,
+    onTarget: () => onTarget,
     show: (home, grip, aim) => {
       view.clear();
+      onTarget = aim !== null && inHole(aim.target);
       // Piquets perpendiculaires à la traction (les deux joueurs, sans cas particulier).
       const dx = grip.x - home.x;
       const dy = grip.y - home.y;
@@ -56,7 +62,7 @@ export function createAimGuide(): {
           .stroke({ width: 2, color: COLORS.waterEdge });
       }
       const t = aim.target;
-      view.ellipse(t.x, t.y, 44, 32).stroke({ width: 4, color: COLORS.guide });
+      view.circle(t.x, t.y, 36).stroke({ width: 4, color: COLORS.guide });
       view
         .moveTo(t.x - 12, t.y)
         .lineTo(t.x + 12, t.y)
@@ -65,6 +71,7 @@ export function createAimGuide(): {
         .stroke({ width: 4, color: COLORS.guide, cap: 'round' });
     },
     hide: () => {
+      onTarget = false;
       view.clear();
     },
   };

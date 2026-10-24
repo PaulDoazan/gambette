@@ -29,6 +29,9 @@ export interface Pool {
   ripple(at: Vec): void;
   /** L'eau entre dans le canal (victoire). */
   overflow(): void;
+  /** Un joueur vise le trou : les pointillés du niveau à atteindre passent au bleu. */
+  setAimOnTarget(on: boolean): void;
+  aimOnTarget(): boolean;
   update(level: number, dtMs: number): void;
   reset(level: number): void;
 }
@@ -56,6 +59,7 @@ export function createPool(startLevel: number): Pool {
   let shown = startLevel;
   let clock = 0;
   let channelFill: number | null = null;
+  let aimOnTarget = false;
   let ripples: { at: Vec; age: number }[] = [];
 
   const draw = (): void => {
@@ -110,7 +114,11 @@ export function createPool(startLevel: number): Pool {
     marks.clear();
     if (channelFill === null) {
       dashedCircle(marks, cx, cy, WATER_R_MAX, 12);
-      marks.stroke({ width: 4, color: COLORS.guide, alpha: 0.75 });
+      marks.stroke(
+        aimOnTarget
+          ? { width: 5, color: COLORS.guideOnTarget, alpha: 1 }
+          : { width: 4, color: COLORS.guide, alpha: 0.75 },
+      );
     }
   };
   draw();
@@ -121,6 +129,12 @@ export function createPool(startLevel: number): Pool {
     ripple: (at) => {
       ripples.push({ at, age: 0 });
     },
+    setAimOnTarget: (on) => {
+      if (on === aimOnTarget) return;
+      aimOnTarget = on;
+      draw();
+    },
+    aimOnTarget: () => aimOnTarget,
     overflow: () => {
       channelFill ??= 0;
     },
@@ -136,6 +150,7 @@ export function createPool(startLevel: number): Pool {
       shown = level;
       ripples = [];
       channelFill = null;
+      aimOnTarget = false;
       draw();
     },
   };
