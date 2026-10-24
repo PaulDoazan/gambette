@@ -1,13 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
-import {
-  CHANNEL_WIDTH,
-  DESIGN_WIDTH,
-  HOLE_RADIUS,
-  MID_Y,
-  WATER_R_MAX,
-  WATER_R_MIN,
-} from '../config/dimensions';
+import { DESIGN_WIDTH, MID_Y, WATER_R_MAX, WATER_R_MIN } from '../config/dimensions';
 import { COLORS } from '../config/theme';
+import { channelCenter, channelOutline } from '../domain/channel';
 import type { Vec } from '../domain/types';
 import { wobblyCircle } from './Beach';
 
@@ -29,6 +23,9 @@ export interface Pool {
   ripple(at: Vec): void;
   /** L'eau entre dans le canal (victoire). */
   overflow(): void;
+  /** Un joueur vise le trou : les pointillés du niveau à atteindre passent au bleu. */
+  setAimOnTarget(on: boolean): void;
+  aimOnTarget(): boolean;
   update(level: number, dtMs: number): void;
   reset(level: number): void;
 }
@@ -56,6 +53,7 @@ export function createPool(startLevel: number): Pool {
   let shown = startLevel;
   let clock = 0;
   let channelFill: number | null = null;
+  let aimOnTarget = false;
   let ripples: { at: Vec; age: number }[] = [];
 
   const draw = (): void => {
@@ -92,16 +90,17 @@ export function createPool(startLevel: number): Pool {
 
     channel.clear();
     if (channelFill !== null) {
-      const x0 = cx + HOLE_RADIUS - 40;
+      // L'eau gagne le canal depuis le trou et suit ses méandres jusqu'au bord.
       const k = Math.min(1, channelFill / CHANNEL_FILL_MS);
-      channel
-        .rect(x0, cy - CHANNEL_WIDTH / 2 + 6, (DESIGN_WIDTH - x0) * k, CHANNEL_WIDTH - 12)
-        .fill(COLORS.water);
-      for (let x = x0 + 30; x < x0 + (DESIGN_WIDTH - x0) * k - 20; x += 60) {
-        const dx = (clock / 8) % 60;
+      channel.poly(channelOutline(-6, Math.max(0.02, k))).fill(COLORS.water);
+      for (let j = 0; j < 5; j++) {
+        const t = (j / 5 + clock / 3000) % 1;
+        if (t < 0.15 || t > k - 0.05) continue;
+        const a = channelCenter(t - 0.03);
+        const b = channelCenter(t + 0.03);
         channel
-          .moveTo(x + dx, cy - 4)
-          .quadraticCurveTo(x + dx + 12, cy - 12, x + dx + 24, cy - 4)
+          .moveTo(a.x, a.y - 4)
+          .lineTo(b.x, b.y - 4)
           .stroke({ width: 3, color: COLORS.foam, alpha: 0.7, cap: 'round' });
       }
     }
@@ -110,7 +109,11 @@ export function createPool(startLevel: number): Pool {
     marks.clear();
     if (channelFill === null) {
       dashedCircle(marks, cx, cy, WATER_R_MAX, 12);
-      marks.stroke({ width: 4, color: COLORS.guide, alpha: 0.75 });
+      marks.stroke(
+        aimOnTarget
+          ? { width: 5, color: COLORS.guideOnTarget, alpha: 1 }
+          : { width: 4, color: COLORS.guide, alpha: 0.75 },
+      );
     }
   };
   draw();
@@ -121,6 +124,12 @@ export function createPool(startLevel: number): Pool {
     ripple: (at) => {
       ripples.push({ at, age: 0 });
     },
+    setAimOnTarget: (on) => {
+      if (on === aimOnTarget) return;
+      aimOnTarget = on;
+      draw();
+    },
+    aimOnTarget: () => aimOnTarget,
     overflow: () => {
       channelFill ??= 0;
     },
@@ -136,6 +145,7 @@ export function createPool(startLevel: number): Pool {
       shown = level;
       ripples = [];
       channelFill = null;
+      aimOnTarget = false;
       draw();
     },
   };

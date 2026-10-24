@@ -166,6 +166,26 @@ describe('GameScene', () => {
     expect(scene.buckets('A')[i]!.empty).toBe(true);
   });
 
+  it('pointillés du trou en bleu tant qu’un joueur vise dedans, blancs sinon', () => {
+    const { scene } = make();
+    const c = holeCenter();
+    const a = scene.correctIndex('A');
+    const b = scene.correctIndex('B');
+    expect(scene.holeHighlighted()).toBe(false);
+    scene.pointerDown(1, bucketHome('A', a));
+    scene.pointerMove(1, gripFor('A', a, { x: c.x - 300, y: c.y + 260 }));
+    expect(scene.holeHighlighted()).toBe(false);
+    scene.pointerMove(1, gripFor('A', a, c));
+    expect(scene.holeHighlighted()).toBe(true);
+    // B vise aussi dedans, puis A relâche sans tirer : B vise toujours le trou.
+    scene.pointerDown(2, bucketHome('B', b));
+    scene.pointerMove(2, gripFor('B', b, c));
+    scene.pointerCancel(1);
+    expect(scene.holeHighlighted()).toBe(true);
+    scene.pointerUp(2);
+    expect(scene.holeHighlighted()).toBe(false);
+  });
+
   it('releaseAll : le seau tenu revient sans tirer', () => {
     const { scene } = make();
     const i = scene.correctIndex('A');

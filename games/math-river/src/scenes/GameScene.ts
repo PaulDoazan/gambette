@@ -41,6 +41,8 @@ export interface GameScene {
   /** Index du seau portant la bonne réponse. */
   correctIndex(player: Player): number;
   level(): number;
+  /** Pointillés autour du trou en bleu : au moins un joueur vise le trou. */
+  holeHighlighted(): boolean;
   tick(deltaMs: number): void;
   reset(): void;
   destroy(): void;
@@ -140,12 +142,18 @@ export function createGameScene(deps: {
     if (flash) s.block.flash();
   };
 
+  // Pointillés du trou en bleu tant qu'au moins un joueur vise dedans.
+  const refreshHoleRing = (): void => {
+    pool.setAimOnTarget(PLAYERS.some((pl) => sides[pl].guide.onTarget()));
+  };
+
   const drop = (pl: Player): void => {
     const s = sides[pl];
     if (!s.held) return;
     const b = s.buckets[s.held.index]!;
     b.setPosition(b.home);
     s.guide.hide();
+    refreshHoleRing();
     s.held = null;
   };
 
@@ -237,6 +245,7 @@ export function createGameScene(deps: {
       b.setPosition(grip);
       s.held.aim = aimFrom(b.home, grip);
       s.guide.show(b.home, grip, s.held.aim);
+      refreshHoleRing();
     },
     pointerUp: (id) => {
       const pl = router.owner(id);
@@ -258,6 +267,7 @@ export function createGameScene(deps: {
       })),
     correctIndex: (pl) => sides[pl].correct,
     level: () => water.level(),
+    holeHighlighted: () => pool.aimOnTarget(),
     tick: (deltaMs) => {
       for (const pl of PLAYERS) {
         const s = sides[pl];
