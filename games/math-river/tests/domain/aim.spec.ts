@@ -80,3 +80,11 @@ describe('inHole', () => {
     expect(inHole(aim.target)).toBe(true);
   });
 });
+
+describe('inHole selon le trou de la manche', () => {
+  it('un plus grand trou attrape l’eau plus loin du centre', () => {
+    const p = { x: holeCenter().x + 200, y: holeCenter().y };
+    expect(inHole(p, 220)).toBe(true);
+    expect(inHole(p)).toBe(false);
+  });
+});

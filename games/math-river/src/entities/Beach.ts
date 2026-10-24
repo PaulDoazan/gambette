@@ -1,8 +1,9 @@
 import { Container, Graphics } from 'pixi.js';
 import { mulberry32 } from '@gambette/math-sdk';
-import { DESIGN_HEIGHT, DESIGN_WIDTH, HOLE_RADIUS, MID_Y } from '../config/dimensions';
+import { DESIGN_HEIGHT, DESIGN_WIDTH, MID_Y } from '../config/dimensions';
+import { ROUNDS, holeCenterOf } from '../config/rounds';
 import { COLORS } from '../config/theme';
-import { channelBank, channelOutline } from '../domain/channel';
+import { channelFrom } from '../domain/channel';
 
 /** Contour un peu irrégulier du trou (rayon `r`, ondulation `wob` px), centré sur (cx, cy). */
 export function wobblyCircle(cx: number, cy: number, r: number, wob: number): number[] {
@@ -83,79 +84,134 @@ function rake(): Graphics {
   return g;
 }
 
+/** Décor propre à chaque écran : cailloux et objets, hors des trous, canaux, seaux et calculs. */
+const SCREENS: ReadonlyArray<{
+  pebbles: ReadonlyArray<readonly [number, number, number]>;
+  props: (cy: number) => Graphics[];
+}> = [
+  {
+    pebbles: [
+      [620, -170, 10],
+      [95, 180, 8],
+      [640, 250, 7],
+      [120, -210, 9],
+    ],
+    props: (cy) => [
+      placed(shell(COLORS.shell, 40), 640, cy - 120, 0.4),
+      placed(shell(COLORS.shellAlt, 34), 64, cy - 300, -0.5),
+      placed(shell(COLORS.shell, 30), 300, cy + 255, 2.6),
+      placed(shell(COLORS.shellAlt, 36), 660, cy + 160, -2.2),
+      placed(shell(COLORS.shell, 28), 440, cy - 300, 1.2),
+      placed(shell(COLORS.shellAlt, 32), 46, cy + 340, 0.9),
+      placed(shovel(), 580, cy - 260, -0.55),
+      placed(rake(), 180, cy + 290, 0.3),
+    ],
+  },
+  {
+    pebbles: [
+      [660, -230, 9],
+      [70, 230, 8],
+      [600, 260, 7],
+    ],
+    props: (cy) => [
+      placed(shell(COLORS.shellAlt, 38), 640, cy - 300, -0.7),
+      placed(shell(COLORS.shell, 30), 380, cy - 300, 0.5),
+      placed(shell(COLORS.shell, 34), 60, cy + 300, 2.2),
+      placed(shell(COLORS.shellAlt, 28), 680, cy + 200, 1.4),
+      placed(shovel(), 250, cy + 305, 0.35),
+    ],
+  },
+  {
+    pebbles: [
+      [80, -260, 9],
+      [560, 270, 8],
+    ],
+    props: (cy) => [
+      placed(shell(COLORS.shell, 36), 560, cy - 300, 0.9),
+      placed(shell(COLORS.shellAlt, 30), 120, cy + 300, -1.1),
+      placed(shell(COLORS.shell, 32), 330, cy + 290, 2.8),
+      placed(rake(), 400, cy - 300, -0.15),
+    ],
+  },
+];
+
 /**
- * Décor fixe, lu à la création (la hauteur dépend de l'écran) : sable semé de grains, cailloux,
- * coquillages, pelle et râteau, trou en cuvette au centre et canal sinueux jusqu'au bord droit.
+ * Décor fixe du monde, lu à la création (la hauteur dépend de l'écran) : trois écrans de sable côte à
+ * côte, chacun avec son trou en cuvette (de plus en plus grand), reliés par des canaux sinueux ; le
+ * dernier canal file vers la mer (dessinée à part, animée).
  */
 export function createBeach(): { readonly view: Container } {
   const view = new Container();
   view.label = 'beach';
-  const cx = DESIGN_WIDTH / 2;
   const cy = MID_Y;
+  const worldWidth = ROUNDS.length * DESIGN_WIDTH;
 
-  const sand = new Graphics().rect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT).fill(COLORS.sand);
+  const sand = new Graphics().rect(0, 0, worldWidth, DESIGN_HEIGHT).fill(COLORS.sand);
   // Grains toujours au même endroit d'une partie à l'autre.
   const rng = mulberry32(7);
-  for (let i = 0; i < 420; i++) {
+  for (let i = 0; i < 420 * ROUNDS.length; i++) {
     sand
-      .circle(rng() * DESIGN_WIDTH, rng() * DESIGN_HEIGHT, 1 + rng() * 1.6)
+      .circle(rng() * worldWidth, rng() * DESIGN_HEIGHT, 1 + rng() * 1.6)
       .fill({ color: rng() > 0.5 ? COLORS.sandGrainDark : COLORS.sandGrainLight, alpha: 0.55 });
   }
-  for (const [x, y, r] of [
-    [620, cy - 170, 10],
-    [95, cy + 180, 8],
-    [640, cy + 250, 7],
-    [120, cy - 210, 9],
-  ] as const) {
-    sand
-      .ellipse(x, y, r, r * 0.7)
-      .fill(0xd9d2c3)
-      .stroke({ width: 1.5, color: COLORS.pitLine });
-  }
-
-  // Coquillages, pelle et râteau : hors du trou, du canal, des seaux et des blocs de calcul.
   const props = new Container();
   props.label = 'props';
-  props.addChild(
-    placed(shell(COLORS.shell, 40), 640, cy - 120, 0.4),
-    placed(shell(COLORS.shellAlt, 34), 64, cy - 300, -0.5),
-    placed(shell(COLORS.shell, 30), 300, cy + 255, 2.6),
-    placed(shell(COLORS.shellAlt, 36), 660, cy + 160, -2.2),
-    placed(shell(COLORS.shell, 28), 440, cy - 300, 1.2),
-    placed(shell(COLORS.shellAlt, 32), 46, cy + 340, 0.9),
-    placed(shovel(), 580, cy - 260, -0.55),
-    placed(rake(), 180, cy + 290, 0.3),
-  );
+  SCREENS.forEach((screen, k) => {
+    const ox = k * DESIGN_WIDTH;
+    for (const [x, dy, r] of screen.pebbles) {
+      sand
+        .ellipse(ox + x, cy + dy, r, r * 0.7)
+        .fill(0xd9d2c3)
+        .stroke({ width: 1.5, color: COLORS.pitLine });
+    }
+    for (const g of screen.props(cy)) {
+      g.x += ox;
+      props.addChild(g);
+    }
+  });
 
   const ground = new Graphics();
-  // Bourrelets de sable du trou et du canal, d'un seul tenant.
-  ground.poly(wobblyCircle(cx, cy, HOLE_RADIUS + 22, 5)).fill(COLORS.rim);
-  ground.poly(channelOutline(8)).fill(COLORS.rim);
-  // Cuvette, puis le lit du canal par-dessus son contour : le raccord n'a pas de trait.
-  ground
-    .poly(wobblyCircle(cx, cy, HOLE_RADIUS, 4))
-    .fill(COLORS.pit)
-    .stroke({ width: 3, color: COLORS.pitLine });
-  ground.poly(channelOutline(0)).fill(COLORS.pit);
-  // Berges du canal, seulement hors du trou : elles prolongent le bord de la cuvette.
-  for (const side of [1, -1] as const) {
-    const bank = channelBank(side);
-    let started = false;
-    for (let i = 0; i < bank.length; i += 2) {
-      const x = bank[i]!;
-      const y = bank[i + 1]!;
-      if (Math.hypot(x - cx, y - cy) < HOLE_RADIUS) continue;
-      if (started) ground.lineTo(x, y);
-      else ground.moveTo(x, y);
-      started = true;
+  const holes = ROUNDS.map((r, k) => ({ c: holeCenterOf(k), r: r.holeRadius }));
+  const channels = ROUNDS.map((_, k) => channelFrom(k));
+  // Bourrelets de sable des trous et des canaux, d'un seul tenant.
+  for (const h of holes) ground.poly(wobblyCircle(h.c.x, h.c.y, h.r + 22, 5)).fill(COLORS.rim);
+  for (const ch of channels) ground.poly(ch.outline(8)).fill(COLORS.rim);
+  // Cuvettes, puis le lit des canaux par-dessus leur contour : les raccords n'ont pas de trait.
+  for (const h of holes) {
+    ground
+      .poly(wobblyCircle(h.c.x, h.c.y, h.r, 4))
+      .fill(COLORS.pit)
+      .stroke({ width: 3, color: COLORS.pitLine });
+  }
+  for (const ch of channels) ground.poly(ch.outline(0)).fill(COLORS.pit);
+  // Berges des canaux, seulement hors des trous : elles prolongent le bord des cuvettes.
+  const inAHole = (x: number, y: number): boolean =>
+    holes.some((h) => Math.hypot(x - h.c.x, y - h.c.y) < h.r);
+  for (const ch of channels) {
+    for (const side of [1, -1] as const) {
+      const bank = ch.bank(side);
+      let started = false;
+      for (let i = 0; i < bank.length; i += 2) {
+        const x = bank[i]!;
+        const y = bank[i + 1]!;
+        if (inAHole(x, y)) {
+          started = false;
+          continue;
+        }
+        if (started) ground.lineTo(x, y);
+        else ground.moveTo(x, y);
+        started = true;
+      }
     }
   }
   ground.stroke({ width: 3, color: COLORS.pitLine, cap: 'round', join: 'round' });
-  for (const k of [0.78, 0.56, 0.34]) {
-    ground
-      .poly(wobblyCircle(cx, cy, HOLE_RADIUS * k, 3))
-      .fill({ color: COLORS.pitDeep, alpha: 0.18 })
-      .stroke({ width: 2, color: COLORS.pitLine, alpha: 0.25 });
+  for (const h of holes) {
+    for (const k of [0.78, 0.56, 0.34]) {
+      ground
+        .poly(wobblyCircle(h.c.x, h.c.y, h.r * k, 3))
+        .fill({ color: COLORS.pitDeep, alpha: 0.18 })
+        .stroke({ width: 2, color: COLORS.pitLine, alpha: 0.25 });
+    }
   }
   view.addChild(sand, props, ground);
   return { view };

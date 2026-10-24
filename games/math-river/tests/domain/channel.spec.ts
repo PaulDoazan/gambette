@@ -1,57 +1,84 @@
 import { describe, it, expect } from 'vitest';
-import {
-  channelCenter,
-  channelHalfWidth,
-  channelHeading,
-  channelOutline,
-} from '../../src/domain/channel';
-import { CHANNEL_WIDTH, DESIGN_WIDTH, HOLE_RADIUS, MID_Y } from '../../src/config/dimensions';
+import { SEA_SHORE_X, channelBoundaryT, channelFrom } from '../../src/domain/channel';
+import { ROUNDS, holeCenterOf } from '../../src/config/rounds';
+import { CHANNEL_WIDTH, DESIGN_WIDTH, MID_Y } from '../../src/config/dimensions';
 
-describe('canal', () => {
-  it('part du trou et sort au bord droit, à mi-hauteur aux deux bouts', () => {
-    const start = channelCenter(0);
-    expect(Math.hypot(start.x - DESIGN_WIDTH / 2, start.y - MID_Y)).toBeLessThan(HOLE_RADIUS);
-    expect(channelCenter(1)).toEqual({ x: DESIGN_WIDTH, y: expect.closeTo(MID_Y, 6) });
-  });
+const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
+  Math.hypot(a.x - b.x, a.y - b.y);
 
-  it('sinueux : il s’écarte de la ligne médiane d’un côté puis de l’autre', () => {
-    expect(channelCenter(0.3).y).toBeGreaterThan(MID_Y + 5);
-    expect(channelCenter(0.75).y).toBeLessThan(MID_Y - 10);
-  });
+describe('canal entre deux trous', () => {
+  for (const k of [0, 1] as const) {
+    const ch = channelFrom(k);
 
-  it('sort du trou à l’horizontale, sans cassure', () => {
-    expect(channelHeading(0.01)).toBeCloseTo(0, 1);
-  });
+    it(`canal ${k} → ${k + 1} : part du trou ${k} et arrive dans le trou ${k + 1}`, () => {
+      expect(dist(ch.center(0), holeCenterOf(k))).toBeLessThan(ROUNDS[k]!.holeRadius);
+      expect(dist(ch.center(1), holeCenterOf(k + 1))).toBeLessThan(ROUNDS[k + 1]!.holeRadius);
+    });
 
-  it('évasé au raccord avec le trou, de largeur régulière ensuite', () => {
-    expect(channelHalfWidth(0)).toBeGreaterThan(CHANNEL_WIDTH);
-    expect(channelHalfWidth(1)).toBeCloseTo(CHANNEL_WIDTH / 2);
-    for (let t = 0.1; t <= 1; t += 0.1)
-      expect(channelHalfWidth(t)).toBeLessThanOrEqual(channelHalfWidth(t - 0.1));
-  });
+    it(`canal ${k} → ${k + 1} : horizontal à mi-hauteur à la frontière des deux écrans`, () => {
+      const t = channelBoundaryT(k);
+      const c = ch.center(t);
+      expect(c.x).toBeCloseTo((k + 1) * DESIGN_WIDTH);
+      expect(c.y).toBeCloseTo(MID_Y);
+      expect(Math.abs(ch.heading(t))).toBeLessThan(0.02);
+    });
 
-  it('contour : un polygone fermé de points finis, tronqué à `upTo`', () => {
-    const full = channelOutline(0);
+    it(`canal ${k} → ${k + 1} : sinueux sur chaque écran`, () => {
+      const t = channelBoundaryT(k);
+      const dev = (a: number, b: number): number => {
+        let m = 0;
+        for (let s = a; s <= b; s += 0.01) m = Math.max(m, Math.abs(ch.center(s).y - MID_Y));
+        return m;
+      };
+      expect(dev(0, t)).toBeGreaterThan(15);
+      expect(dev(t, 1)).toBeGreaterThan(15);
+    });
+
+    it(`canal ${k} → ${k + 1} : sort et entre dans les trous à l’horizontale`, () => {
+      expect(Math.abs(ch.heading(0.01))).toBeLessThan(0.1);
+      expect(Math.abs(ch.heading(0.99))).toBeLessThan(0.1);
+    });
+
+    it(`canal ${k} → ${k + 1} : évasé aux deux raccords, régulier entre les deux`, () => {
+      expect(ch.halfWidth(0)).toBeGreaterThan(CHANNEL_WIDTH);
+      expect(ch.halfWidth(1)).toBeGreaterThan(CHANNEL_WIDTH);
+      expect(ch.halfWidth(channelBoundaryT(k))).toBeCloseTo(CHANNEL_WIDTH / 2, 0);
+    });
+
+    it(`canal ${k} → ${k + 1} : les berges partent des bords des trous, dans le sens du contour`, () => {
+      for (const [t, dt, hole] of [
+        [0, 0.02, k],
+        [1, -0.02, k + 1],
+      ] as const) {
+        const centre = holeCenterOf(hole);
+        const bankAt = (s: number) => ({ x: ch.center(s).x, y: ch.center(s).y - ch.halfWidth(s) });
+        const bank = bankAt(t);
+        expect(Math.abs(dist(bank, centre) - ROUNDS[hole]!.holeRadius)).toBeLessThan(8);
+        const next = bankAt(t + dt);
+        const along = Math.atan2(next.y - bank.y, next.x - bank.x);
+        const radial = Math.atan2(bank.y - centre.y, bank.x - centre.x);
+        const tangent = radial + (dt > 0 ? Math.PI / 2 : -Math.PI / 2);
+        const diff = Math.atan2(Math.sin(along - tangent), Math.cos(along - tangent));
+        expect(Math.abs(diff)).toBeLessThan(0.35);
+      }
+    });
+  }
+
+  it('contour : un polygone fermé de points finis, tronqué à [from, to]', () => {
+    const ch = channelFrom(0);
+    const full = ch.outline(0);
     expect(full.length % 2).toBe(0);
     expect(full.every(Number.isFinite)).toBe(true);
-    const half = channelOutline(0, 0.5);
-    const maxX = Math.max(...half.filter((_, i) => i % 2 === 0));
-    expect(maxX).toBeLessThan(DESIGN_WIDTH - 50);
+    const half = ch.outline(0, 0, channelBoundaryT(0) / 2);
+    expect(Math.max(...half.filter((_, i) => i % 2 === 0))).toBeLessThan(DESIGN_WIDTH - 20);
   });
 });
 
-describe('raccord du canal au trou', () => {
-  it('les berges partent du bord du trou, dans le sens de son contour', () => {
-    const c = channelCenter(0);
-    const w = channelHalfWidth(0);
-    const bank = { x: c.x, y: c.y - w };
-    const r = Math.hypot(bank.x - DESIGN_WIDTH / 2, bank.y - MID_Y);
-    expect(Math.abs(r - HOLE_RADIUS)).toBeLessThan(8);
-    // Pente de la berge au départ ≈ pente de la tangente au cercle en ce point.
-    const next = { x: channelCenter(0.02).x, y: channelCenter(0.02).y - channelHalfWidth(0.02) };
-    const bankAngle = Math.atan2(next.y - bank.y, next.x - bank.x);
-    const radial = Math.atan2(bank.y - MID_Y, bank.x - DESIGN_WIDTH / 2);
-    const tangent = radial + Math.PI / 2;
-    expect(Math.abs(bankAngle - tangent)).toBeLessThan(0.35);
+describe('canal vers la mer', () => {
+  it('part du dernier trou et se jette dans la mer', () => {
+    const ch = channelFrom(2);
+    expect(dist(ch.center(0), holeCenterOf(2))).toBeLessThan(ROUNDS[2]!.holeRadius);
+    expect(ch.center(1).x).toBeGreaterThan(SEA_SHORE_X());
+    expect(SEA_SHORE_X()).toBeLessThan(3 * DESIGN_WIDTH);
   });
 });

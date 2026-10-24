@@ -57,8 +57,11 @@ export function flightAt(from: Vec, to: Vec, t: number): Vec & { lift: number } 
 /** Centre du trou (milieu du plateau, lu à l'appel : la hauteur dépend de l'écran). */
 export const holeCenter = (): Vec => ({ x: DESIGN_WIDTH / 2, y: MID_Y });
 
-/** L'eau tombée en `p` est-elle dans le trou ? */
-export function inHole(p: Vec): boolean {
+/**
+ * L'eau tombée en `p` (coordonnées écran) est-elle dans le trou de rayon `radius` ? Pendant une
+ * manche, son trou est toujours au centre de l'écran.
+ */
+export function inHole(p: Vec, radius = HOLE_RADIUS): boolean {
   const c = holeCenter();
-  return Math.hypot(p.x - c.x, p.y - c.y) <= HOLE_RADIUS;
+  return Math.hypot(p.x - c.x, p.y - c.y) <= radius;
 }

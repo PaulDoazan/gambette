@@ -1,18 +1,21 @@
 import { Container, Graphics } from 'pixi.js';
-import { DESIGN_WIDTH, MID_Y, WATER_R_MAX, WATER_R_MIN } from '../config/dimensions';
+import { WATER_R_MIN } from '../config/dimensions';
+import { PAN_MS, holeCenterOf, waterRadiusMax } from '../config/rounds';
 import { COLORS } from '../config/theme';
-import { channelCenter, channelOutline } from '../domain/channel';
+import { channelFrom } from '../domain/channel';
 import type { Vec } from '../domain/types';
 import { wobblyCircle } from './Beach';
 
-/** Rayon de la surface de l'eau pour un niveau ∈ [0, 1] (le trou est une cuvette). */
-export const waterRadius = (level: number): number =>
-  WATER_R_MIN + (WATER_R_MAX - WATER_R_MIN) * Math.min(1, Math.max(0, level));
+/** Rayon de la surface de l'eau du trou k pour un niveau ∈ [0, 1] (le trou est une cuvette). */
+export const waterRadius = (level: number, k: number): number =>
+  WATER_R_MIN + (waterRadiusMax(k) - WATER_R_MIN) * Math.min(1, Math.max(0, level));
 
 /** Durée de vie d'une onde (ms) quand un seau tombe dans le trou. */
 const RIPPLE_MS = 900;
 /** Durée de remplissage du canal (ms) quand l'eau l'atteint. */
 const CHANNEL_FILL_MS = 700;
+/** Durée du vidage du canal derrière le poisson (ms). */
+export const CHANNEL_DRAIN_MS = 0.6 * PAN_MS;
 /** Lissage visuel du niveau : l'eau monte et descend sans à-coups (fraction rattrapée par ms). */
 const EASE_PER_MS = 0.006;
 
@@ -21,8 +24,10 @@ export interface Pool {
   /** Niveau affiché (lissé), qui suit le niveau réel. */
   shownLevel(): number;
   ripple(at: Vec): void;
-  /** L'eau entre dans le canal (victoire). */
+  /** L'eau entre dans le canal (fin de manche). */
   overflow(): void;
+  /** Le canal se vide derrière le poisson (transition vers le trou suivant). */
+  drain(): void;
   /** Un joueur vise le trou : les pointillés du niveau à atteindre passent au bleu. */
   setAimOnTarget(on: boolean): void;
   aimOnTarget(): boolean;
@@ -40,11 +45,12 @@ function dashedCircle(g: Graphics, cx: number, cy: number, r: number, dash: numb
   }
 }
 
-export function createPool(startLevel: number): Pool {
+/** Eau du trou k et de son canal de sortie, en coordonnées du monde. */
+export function createPool(k: number, startLevel: number): Pool {
   const view = new Container();
   view.label = 'pool';
-  const cx = DESIGN_WIDTH / 2;
-  const cy = MID_Y;
+  const { x: cx, y: cy } = holeCenterOf(k);
+  const path = channelFrom(k);
   const channel = new Graphics();
   const water = new Graphics();
   const marks = new Graphics();
@@ -53,11 +59,12 @@ export function createPool(startLevel: number): Pool {
   let shown = startLevel;
   let clock = 0;
   let channelFill: number | null = null;
+  let channelDrain: number | null = null;
   let aimOnTarget = false;
   let ripples: { at: Vec; age: number }[] = [];
 
   const draw = (): void => {
-    const r = waterRadius(shown);
+    const r = waterRadius(shown, k);
     water.clear();
     water.poly(wobblyCircle(cx, cy, r + 12, 3)).fill({ color: COLORS.wetSand, alpha: 0.45 });
     water
@@ -89,15 +96,20 @@ export function createPool(startLevel: number): Pool {
     }
 
     channel.clear();
-    if (channelFill !== null) {
-      // L'eau gagne le canal depuis le trou et suit ses méandres jusqu'au bord.
-      const k = Math.min(1, channelFill / CHANNEL_FILL_MS);
-      channel.poly(channelOutline(-6, Math.max(0.02, k))).fill(COLORS.water);
+    if (channelDrain !== null) {
+      // Le canal se vide depuis le trou ; il reste du sable mouillé derrière l'eau.
+      const d = Math.min(1, channelDrain / CHANNEL_DRAIN_MS);
+      channel.poly(path.outline(-6)).fill({ color: COLORS.wetSand, alpha: 0.45 });
+      if (d < 0.98) channel.poly(path.outline(-6, d, 1)).fill(COLORS.water);
+    } else if (channelFill !== null) {
+      // L'eau gagne le canal depuis le trou et suit ses méandres jusqu'au bout.
+      const f = Math.min(1, channelFill / CHANNEL_FILL_MS);
+      channel.poly(path.outline(-6, 0, Math.max(0.02, f))).fill(COLORS.water);
       for (let j = 0; j < 5; j++) {
         const t = (j / 5 + clock / 3000) % 1;
-        if (t < 0.15 || t > k - 0.05) continue;
-        const a = channelCenter(t - 0.03);
-        const b = channelCenter(t + 0.03);
+        if (t < 0.15 || t > f - 0.05) continue;
+        const a = path.center(t - 0.03);
+        const b = path.center(t + 0.03);
         channel
           .moveTo(a.x, a.y - 4)
           .lineTo(b.x, b.y - 4)
@@ -108,7 +120,7 @@ export function createPool(startLevel: number): Pool {
     // Repère du niveau à atteindre : celui du canal.
     marks.clear();
     if (channelFill === null) {
-      dashedCircle(marks, cx, cy, WATER_R_MAX, 12);
+      dashedCircle(marks, cx, cy, waterRadiusMax(k), 12);
       marks.stroke(
         aimOnTarget
           ? { width: 5, color: COLORS.guideOnTarget, alpha: 1 }
@@ -133,18 +145,24 @@ export function createPool(startLevel: number): Pool {
     overflow: () => {
       channelFill ??= 0;
     },
+    drain: () => {
+      channelFill ??= CHANNEL_FILL_MS;
+      channelDrain ??= 0;
+    },
     update: (level, dtMs) => {
       clock += dtMs;
       shown += (level - shown) * Math.min(1, EASE_PER_MS * dtMs);
       for (const rp of ripples) rp.age += dtMs;
       ripples = ripples.filter((rp) => rp.age < RIPPLE_MS);
       if (channelFill !== null) channelFill += dtMs;
+      if (channelDrain !== null) channelDrain += dtMs;
       draw();
     },
     reset: (level) => {
       shown = level;
       ripples = [];
       channelFill = null;
+      channelDrain = null;
       aimOnTarget = false;
       draw();
     },

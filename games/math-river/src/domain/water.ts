@@ -1,4 +1,7 @@
-import { DRAIN_PER_SECOND, MIN_LEVEL, START_LEVEL, WATER_PER_BUCKET } from '../config/water';
+import type { RoundSpec } from '../config/rounds';
+import { MIN_LEVEL, START_LEVEL } from '../config/water';
+
+type WaterSpec = Pick<RoundSpec, 'perBucket' | 'drainPerSecond'>;
 
 export interface Water {
   /** Niveau ∈ [MIN_LEVEL, 1] ; 1 = niveau du canal. */
@@ -9,23 +12,26 @@ export interface Water {
   update(dtMs: number): void;
   /** L'eau atteint le canal : le poisson peut s'échapper. */
   full(): boolean;
-  reset(): void;
+  /** Niveau de départ ; avec `spec`, passe aux réglages d'une autre manche. */
+  reset(spec?: WaterSpec): void;
 }
 
-export function createWater(start = START_LEVEL): Water {
+export function createWater(initial: WaterSpec, start = START_LEVEL): Water {
+  let spec = initial;
   let level = start;
   return {
     level: () => level,
     pour: () => {
-      level = Math.min(1, level + WATER_PER_BUCKET);
+      level = Math.min(1, level + spec.perBucket);
     },
     update: (dtMs) => {
       // Une fois plein, l'eau s'écoule par le canal : plus d'infiltration qui compte.
       if (level >= 1) return;
-      level = Math.max(MIN_LEVEL, level - (DRAIN_PER_SECOND * dtMs) / 1000);
+      level = Math.max(MIN_LEVEL, level - (spec.drainPerSecond * dtMs) / 1000);
     },
     full: () => level >= 1,
-    reset: () => {
+    reset: (next) => {
+      if (next) spec = next;
       level = start;
     },
   };

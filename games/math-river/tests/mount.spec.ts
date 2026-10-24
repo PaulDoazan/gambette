@@ -52,26 +52,30 @@ interface FakeScene {
   destroy: Fn;
   pairs: readonly unknown[];
   win(): void;
+  uiHidden(hidden: boolean): void;
 }
 const { fakeScenes } = vi.hoisted(() => ({ fakeScenes: [] as unknown[] }));
 vi.mock('../src/scenes/GameScene', () => ({
-  createGameScene: vi.fn((deps: { onWin(): void; pairs: readonly unknown[] }) => {
-    const scene = {
-      view: new Container(),
-      pairs: deps.pairs,
-      pointerDown: vi.fn(),
-      pointerMove: vi.fn(),
-      pointerUp: vi.fn(),
-      pointerCancel: vi.fn(),
-      releaseAll: vi.fn(),
-      tick: vi.fn(),
-      reset: vi.fn(),
-      destroy: vi.fn(),
-      win: () => deps.onWin(),
-    };
-    fakeScenes.push(scene);
-    return scene;
-  }),
+  createGameScene: vi.fn(
+    (deps: { onWin(): void; onUiHidden?(hidden: boolean): void; pairs: readonly unknown[] }) => {
+      const scene = {
+        view: new Container(),
+        pairs: deps.pairs,
+        pointerDown: vi.fn(),
+        pointerMove: vi.fn(),
+        pointerUp: vi.fn(),
+        pointerCancel: vi.fn(),
+        releaseAll: vi.fn(),
+        tick: vi.fn(),
+        reset: vi.fn(),
+        destroy: vi.fn(),
+        win: () => deps.onWin(),
+        uiHidden: (hidden: boolean) => deps.onUiHidden?.(hidden),
+      };
+      fakeScenes.push(scene);
+      return scene;
+    },
+  ),
 }));
 
 // Sélecteur de calculs simulé : renvoie une autre sélection.
@@ -191,6 +195,18 @@ describe('mathRiver.mount / unmount', () => {
 });
 
 describe('cycle de victoire', () => {
+  it('fin de manche : bandeau et boutons masqués, puis réaffichés quand la manche suivante commence', async () => {
+    const el = document.createElement('div');
+    const instance = await mathRiver.mount(el, ctx());
+    scene0().uiHidden(true);
+    expect(exitWrap(el).style.display).toBe('none');
+    expect(gearOf(el).parentElement!.style.display).toBe('none');
+    scene0().uiHidden(false);
+    expect(exitWrap(el).style.display).not.toBe('none');
+    expect(gearOf(el).parentElement!.style.display).not.toBe('none');
+    instance.unmount();
+  });
+
   it('victoire → entrées bloquées, boutons masqués ; Rejouer → tout revient après le délai', async () => {
     const el = document.createElement('div');
     const instance = await mathRiver.mount(el, ctx());

@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { BUCKET_RADIUS } from '../config/dimensions';
+import { BUCKET_RADIUS, HOLE_RADIUS } from '../config/dimensions';
 import { COLORS } from '../config/theme';
 import { flightAt, inHole, type Aim } from '../domain/aim';
 import type { Vec } from '../domain/types';
@@ -16,7 +16,8 @@ const PEG_SPREAD = BUCKET_RADIUS + 14;
  */
 export function createAimGuide(): {
   readonly view: Graphics;
-  show(home: Vec, grip: Vec, aim: Aim | null): void;
+  /** `holeRadius` : rayon du trou de la manche en cours. */
+  show(home: Vec, grip: Vec, aim: Aim | null, holeRadius?: number): void;
   hide(): void;
   /** La visée affichée tombe-t-elle dans le trou ? */
   onTarget(): boolean;
@@ -27,9 +28,9 @@ export function createAimGuide(): {
   return {
     view,
     onTarget: () => onTarget,
-    show: (home, grip, aim) => {
+    show: (home, grip, aim, holeRadius = HOLE_RADIUS) => {
       view.clear();
-      onTarget = aim !== null && inHole(aim.target);
+      onTarget = aim !== null && inHole(aim.target, holeRadius);
       // Piquets perpendiculaires à la traction (les deux joueurs, sans cas particulier).
       const dx = grip.x - home.x;
       const dy = grip.y - home.y;

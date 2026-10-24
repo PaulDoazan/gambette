@@ -3,13 +3,8 @@ import { computeAnswer, mulberry32, type Pair } from '@gambette/math-sdk';
 import { createGameScene, bucketHome } from '../../src/scenes/GameScene';
 import { holeCenter } from '../../src/domain/aim';
 import { MAX_RANGE, MAX_STRETCH } from '../../src/config/dimensions';
-import {
-  ESCAPE_MS,
-  MIN_LEVEL,
-  START_LEVEL,
-  WATER_PER_BUCKET,
-  flightMs,
-} from '../../src/config/water';
+import { MIN_LEVEL, START_LEVEL, flightMs } from '../../src/config/water';
+import { PAN_MS, ROUNDS, UI_FADE_MS } from '../../src/config/rounds';
 import type { Player, Vec } from '../../src/domain/types';
 
 const PAIRS: Pair[] = [
@@ -18,9 +13,10 @@ const PAIRS: Pair[] = [
   { a: 3, b: 9, op: 'mul' },
 ];
 
-const make = (onWin = vi.fn()) => ({
-  scene: createGameScene({ pairs: PAIRS, rng: mulberry32(3), onWin }),
+const make = (onWin = vi.fn(), onUiHidden = vi.fn()) => ({
+  scene: createGameScene({ pairs: PAIRS, rng: mulberry32(3), onWin, onUiHidden }),
   onWin,
+  onUiHidden,
 });
 
 type Scene = ReturnType<typeof make>['scene'];
@@ -42,11 +38,26 @@ const throwBucket = (scene: Scene, pl: Player, i: number, target: Vec): void => 
   scene.pointerUp(ids[pl]);
 };
 const wrongIndex = (scene: Scene, pl: Player): number => (scene.correctIndex(pl) + 1) % 5;
-/** Avance le temps par pas de 16 ms. */
-const run = (scene: Scene, ms: number): void => {
-  for (let t = 0; t < ms; t += 16) scene.tick(16);
+/**
+ * Avance le temps par pas de `step` ms (50 par défaut : chaque pas redessine tout le monde, et les
+ * parties longues doivent rester rapides en CI).
+ */
+const run = (scene: Scene, ms: number, step = 50): void => {
+  for (let t = 0; t < ms; t += step) scene.tick(step);
 };
+const WATER_PER_BUCKET = ROUNDS[0]!.perBucket;
 const MAX_FLIGHT = flightMs(MAX_RANGE) + 50;
+/** Fin de manche complète : effacement, trajet du poisson, retour de l'interface. */
+const TRANSITION = PAN_MS + 2 * UI_FADE_MS + 100;
+/** Bons seaux au centre, en alternant les joueurs, jusqu'à ce que l'eau atteigne le canal. */
+const fillHole = (scene: Scene): void => {
+  for (let k = 0; k < 80 && scene.level() < 1; k++) {
+    const pl: Player = k % 2 ? 'B' : 'A';
+    throwBucket(scene, pl, scene.correctIndex(pl), holeCenter());
+    run(scene, MAX_FLIGHT);
+  }
+  expect(scene.level()).toBe(1);
+};
 
 describe('GameScene', () => {
   it('chaque joueur a son calcul et 5 seaux, dont un seul porte la bonne réponse', () => {
@@ -67,7 +78,7 @@ describe('GameScene', () => {
     expect(scene.buckets('A')[scene.correctIndex('A')]!.empty).toBe(true);
     expect(scene.level()).toBe(START_LEVEL); // encore en vol
     run(scene, MAX_FLIGHT);
-    expect(scene.level()).toBeGreaterThan(START_LEVEL + WATER_PER_BUCKET - 0.05);
+    expect(scene.level()).toBeGreaterThan(START_LEVEL + WATER_PER_BUCKET - 0.01);
     expect(scene.calc('A')).not.toBe(before);
     expect(scene.buckets('A').every((b) => !b.empty)).toBe(true);
   });
@@ -127,31 +138,118 @@ describe('GameScene', () => {
     scene.pointerUp(1);
     scene.pointerUp(2);
     run(scene, MAX_FLIGHT);
-    expect(scene.level()).toBeGreaterThan(START_LEVEL + 2 * WATER_PER_BUCKET - 0.05);
+    expect(scene.level()).toBeGreaterThan(START_LEVEL + 2 * WATER_PER_BUCKET - 0.02);
   });
 
   it('sans tir, le trou ne se vide jamais sous le plancher', () => {
     const { scene } = make();
-    run(scene, 120_000);
+    run(scene, 60_000, 100);
     expect(scene.level()).toBe(MIN_LEVEL);
   });
 
-  it('eau au niveau du canal : plus de tir, le poisson s’échappe, puis onWin une seule fois', () => {
-    const { scene, onWin } = make();
-    for (let k = 0; k < 10 && scene.level() < 1; k++) {
+  it('fin de manche 1 : l’interface s’efface, le poisson gagne le trou 2, puis on rejoue', () => {
+    const { scene, onWin, onUiHidden } = make();
+    fillHole(scene);
+    expect(onUiHidden).toHaveBeenLastCalledWith(true);
+    expect(scene.uiVisible()).toBe(false);
+    expect(scene.round()).toBe(0);
+    // Pendant la transition, un seau ne se saisit pas.
+    const i = scene.correctIndex('A');
+    scene.pointerDown(1, bucketHome('A', i));
+    scene.pointerMove(1, gripFor('A', i, holeCenter()));
+    expect(scene.buckets('A')[i]!.position).toEqual(bucketHome('A', i));
+    scene.pointerUp(1);
+    run(scene, TRANSITION);
+    expect(scene.round()).toBe(1);
+    expect(scene.cameraX()).toBe(720);
+    // Repart du fond de départ (l'infiltration a repris avec l'interface).
+    expect(scene.level()).toBeCloseTo(START_LEVEL, 2);
+    expect(onUiHidden).toHaveBeenLastCalledWith(false);
+    expect(scene.uiVisible()).toBe(true);
+    expect(onWin).not.toHaveBeenCalled();
+    // Jouable, avec l'apport de la manche 2.
+    throwBucket(scene, 'A', scene.correctIndex('A'), holeCenter());
+    run(scene, MAX_FLIGHT);
+    expect(scene.level()).toBeGreaterThan(START_LEVEL + ROUNDS[1]!.perBucket - 0.01);
+  });
+
+  it('le plus grand trou de la manche 3 attrape l’eau tombée plus loin du centre', () => {
+    const { scene } = make();
+    for (let r = 0; r < 2; r++) {
+      fillHole(scene);
+      run(scene, TRANSITION);
+    }
+    expect(scene.round()).toBe(2);
+    const far = { x: holeCenter().x - 200, y: holeCenter().y };
+    throwBucket(scene, 'A', scene.correctIndex('A'), far);
+    run(scene, MAX_FLIGHT);
+    expect(scene.level()).toBeGreaterThan(START_LEVEL);
+  });
+
+  it('doigt posé en fin de manche : le seau revient sans tirer', () => {
+    const { scene } = make();
+    for (let k = 0; k < 80; k++) {
       const pl: Player = k % 2 ? 'B' : 'A';
       throwBucket(scene, pl, scene.correctIndex(pl), holeCenter());
+      run(scene, MAX_FLIGHT - 200);
+      if (scene.level() + ROUNDS[0]!.perBucket >= 1) break;
+      run(scene, 200);
+    }
+    // B tient un seau quand l'eau en vol de A remplit le trou.
+    const i = scene.correctIndex('B');
+    scene.pointerDown(2, bucketHome('B', i));
+    scene.pointerMove(2, gripFor('B', i, holeCenter()));
+    run(scene, 400);
+    expect(scene.uiVisible()).toBe(false);
+    expect(scene.buckets('B')[i]!.position).toEqual(bucketHome('B', i));
+    scene.pointerUp(2);
+    expect(scene.buckets('B')[i]!.empty).toBe(false);
+  });
+
+  it('eau en vol en fin de manche : elle ne compte pas pour le trou suivant', () => {
+    const { scene } = make();
+    for (let k = 0; k < 80 && scene.level() < 1; k++) {
+      const pl: Player = k % 2 ? 'B' : 'A';
+      throwBucket(scene, pl, scene.correctIndex(pl), holeCenter());
+      // B tire aussi : son eau est encore en vol quand celle de A remplit le trou.
+      if (pl === 'A') throwBucket(scene, 'B', scene.correctIndex('B'), holeCenter());
       run(scene, MAX_FLIGHT);
     }
-    expect(scene.level()).toBe(1);
-    expect(onWin).not.toHaveBeenCalled();
-    const i = scene.correctIndex('A');
-    throwBucket(scene, 'A', i, holeCenter());
-    expect(scene.buckets('A')[i]!.empty).toBe(false);
-    run(scene, ESCAPE_MS + 200);
+    run(scene, TRANSITION);
+    expect(scene.round()).toBe(1);
+    expect(scene.level()).toBeLessThanOrEqual(START_LEVEL);
+    expect(scene.buckets('B').every((b) => !b.empty)).toBe(true);
+  });
+
+  it('trois manches remplies : victoire une seule fois, après la manche 3', () => {
+    const { scene, onWin } = make();
+    for (let r = 0; r < 2; r++) {
+      fillHole(scene);
+      run(scene, TRANSITION);
+      expect(onWin).not.toHaveBeenCalled();
+    }
+    fillHole(scene);
+    run(scene, TRANSITION);
     expect(onWin).toHaveBeenCalledTimes(1);
-    run(scene, 1000);
+    expect(scene.round()).toBe(2);
+    run(scene, 2000);
     expect(onWin).toHaveBeenCalledTimes(1);
+  });
+
+  it('reset après la victoire : retour à la manche 1, jouable', () => {
+    const { scene } = make();
+    for (let r = 0; r < 3; r++) {
+      fillHole(scene);
+      run(scene, TRANSITION);
+    }
+    scene.reset();
+    expect(scene.round()).toBe(0);
+    expect(scene.cameraX()).toBe(0);
+    expect(scene.level()).toBe(START_LEVEL);
+    expect(scene.uiVisible()).toBe(true);
+    throwBucket(scene, 'A', scene.correctIndex('A'), holeCenter());
+    run(scene, MAX_FLIGHT);
+    expect(scene.level()).toBeGreaterThan(START_LEVEL);
   });
 
   it('doigt annulé par le système : le seau revient sans tirer et le joueur peut rejouer', () => {
