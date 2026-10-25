@@ -80,7 +80,7 @@ export const CALCS_PICKER_CSS = `
 .cp-tab-active {
   background: #ffd76a;
 }
-.cp-section { margin-bottom: 14px; }
+.cp-section { margin-bottom: 8px; border: 2px solid #111; border-radius: 8px; overflow: hidden; }
 .cp-random-row {
   display: flex;
   align-items: center;
@@ -106,13 +106,39 @@ export const CALCS_PICKER_CSS = `
   align-items: center;
   font-size: 16px;
   font-weight: 800;
-  padding: 8px 6px;
-  cursor: pointer;
-  border-bottom: 2px solid #111;
+  padding: 4px 6px;
   user-select: none;
   background: #ffeec2;
-  border-radius: 6px 6px 0 0;
 }
+.cp-section-open .cp-section-header { border-bottom: 2px solid #111; }
+.cp-section-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cp-section-name { flex: 1; }
+.cp-section-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(17, 17, 17, 0.6);
+}
+.cp-chevron {
+  display: inline-block;
+  width: 20px;
+  text-align: center;
+  transition: transform 0.15s;
+}
+.cp-section-open .cp-chevron { transform: rotate(90deg); }
+.cp-section-rows { padding: 0 6px; background: #fff8e5; }
 .cp-section-header input[type="checkbox"] {
   width: 22px;
   height: 22px;
