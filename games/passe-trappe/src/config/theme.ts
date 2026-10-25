@@ -9,6 +9,8 @@ export const COLORS = {
   text: 0xffffff,
   button: 0xffcc5c,
   buttonText: 0x00274b,
+  /** Interrupteur des réglages, coupé. */
+  switchOff: 0xc9c2b0,
   calcFill: 0xfff8e5,
   calcText: 0x111111,
   puckText: 0xffffff,

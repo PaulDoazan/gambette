@@ -15,17 +15,21 @@ describe('Settings passe-trappe', () => {
   it('défauts : 5 palets, 10 multiplications', () => {
     const s = loadSettings();
     expect(s.pucksPerPlayer).toBe(DEFAULT_PUCKS);
-    expect(s.selectedPairs).toHaveLength(10);
+    expect(s.calcs.same).toBe(true);
+    expect(s.calcs.A).toHaveLength(10);
+    expect(s.calcs.B).toEqual(s.calcs.A);
   });
 
   it('aller-retour, calculs dans le store du math-sdk', () => {
-    const next = { pucksPerPlayer: 8, selectedPairs: [{ a: 3, b: 4, op: 'add' as const }] };
+    const A = [{ a: 3, b: 4, op: 'add' as const }];
+    const next = {
+      pucksPerPlayer: 8,
+      calcs: { same: false, A, B: [{ a: 9, b: 9, op: 'mul' as const }] },
+    };
     saveSettings(next);
     expect(loadSettings()).toEqual(next);
     expect(JSON.parse(localStorage.getItem(SETTINGS_KEY)!)).toEqual({ pucksPerPlayer: 8 });
-    expect(JSON.parse(localStorage.getItem(calcsStorageKey('passe-trappe'))!)).toEqual(
-      next.selectedPairs,
-    );
+    expect(JSON.parse(localStorage.getItem(calcsStorageKey('passe-trappe'))!)).toEqual(A);
   });
 
   it('borné à [5, 10]', () => {
@@ -47,15 +51,21 @@ describe('Settings passe-trappe', () => {
       throw new Error('QuotaExceededError');
     });
     expect(loadSettings().pucksPerPlayer).toBe(DEFAULT_PUCKS);
-    expect(() => saveSettings({ pucksPerPlayer: 6, selectedPairs: [] })).not.toThrow();
+    expect(() =>
+      saveSettings({ pucksPerPlayer: 6, calcs: { same: true, A: [], B: [] } }),
+    ).not.toThrow();
     expect(getItem).toHaveBeenCalled();
     expect(setItem).toHaveBeenCalled();
   });
 
   it('settingsChanged : nombre de palets ou calculs', () => {
-    const a = { pucksPerPlayer: 5, selectedPairs: [{ a: 6, b: 8, op: 'mul' as const }] };
+    const P = [{ a: 6, b: 8, op: 'mul' as const }];
+    const a = { pucksPerPlayer: 5, calcs: { same: true, A: P, B: P } };
     expect(settingsChanged(a, { ...a })).toBe(false);
     expect(settingsChanged(a, { ...a, pucksPerPlayer: 6 })).toBe(true);
-    expect(settingsChanged(a, { ...a, selectedPairs: [{ a: 7, b: 8, op: 'mul' }] })).toBe(true);
+    expect(settingsChanged(a, { ...a, calcs: { ...a.calcs, same: false } })).toBe(true);
+    expect(
+      settingsChanged(a, { ...a, calcs: { ...a.calcs, A: [{ a: 7, b: 8, op: 'mul' }] } }),
+    ).toBe(true);
   });
 });

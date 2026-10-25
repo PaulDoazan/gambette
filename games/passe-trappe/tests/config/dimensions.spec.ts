@@ -76,7 +76,7 @@ describe('configureBoard', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: [{ a: 6, b: 8, op: 'mul' }],
+      pairs: { A: [{ a: 6, b: 8, op: 'mul' }], B: [{ a: 6, b: 8, op: 'mul' }] },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });

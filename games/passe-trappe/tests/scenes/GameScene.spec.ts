@@ -28,12 +28,27 @@ let physics: PhysicsWorld;
 afterEach(() => physics.destroy());
 
 describe('GameScene', () => {
+  it('calculs séparés : chaque camp tire dans sa propre sélection', () => {
+    physics = createPhysicsWorld();
+    const B: Pair[] = [{ a: 2, b: 5, op: 'add' }];
+    const scene = createGameScene({
+      physics,
+      pucksPerPlayer: 5,
+      pairs: { A: PAIRS, B },
+      rng: mulberry32(1),
+      onWin: vi.fn(),
+    });
+    expect(PAIRS).toContainEqual(scene.calc('A'));
+    expect(scene.calc('B')).toEqual(B[0]);
+    scene.destroy();
+  });
+
   it('5 palets par camp au départ', () => {
     physics = createPhysicsWorld();
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });
@@ -50,7 +65,7 @@ describe('GameScene', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin,
     });
@@ -70,7 +85,7 @@ describe('GameScene', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });
@@ -97,7 +112,7 @@ describe('GameScene', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin,
     });
@@ -117,7 +132,7 @@ describe('GameScene', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });
@@ -134,7 +149,7 @@ describe('GameScene — Rejouer pendant un retournement', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });
@@ -289,7 +304,7 @@ describe('scatteredPuckPositions — palets un peu désordonnés', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(11),
       onWin: vi.fn(),
     });
@@ -309,7 +324,7 @@ describe('GameScene — nombre de palets', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 10,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });
@@ -334,7 +349,7 @@ describe('GameScene — palet à cheval sur l’élastique', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(3),
       onWin: vi.fn(),
     });
@@ -381,7 +396,7 @@ describe('GameScene — calcul', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });
@@ -402,7 +417,7 @@ describe('GameScene — calcul', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });
@@ -434,7 +449,7 @@ describe('GameScene — calcul', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(2),
       onWin: vi.fn(),
     });
@@ -472,7 +487,7 @@ describe('GameScene — calcul', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(2),
       onWin: vi.fn(),
     });
@@ -487,7 +502,7 @@ describe('GameScene — calcul', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(4),
       onWin: vi.fn(),
     });
@@ -512,7 +527,7 @@ describe('GameScene — calcul', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(5),
       onWin: vi.fn(),
     });
@@ -536,7 +551,7 @@ describe('GameScene — calcul', () => {
       const scene = createGameScene({
         physics,
         pucksPerPlayer: 5,
-        pairs: PAIRS,
+        pairs: { A: PAIRS, B: PAIRS },
         rng: mulberry32(3),
         onWin: vi.fn(),
       });
@@ -574,7 +589,7 @@ describe('GameScene — calcul', () => {
     const scene = createGameScene({
       physics,
       pucksPerPlayer: 5,
-      pairs: PAIRS,
+      pairs: { A: PAIRS, B: PAIRS },
       rng: mulberry32(1),
       onWin: vi.fn(),
     });
