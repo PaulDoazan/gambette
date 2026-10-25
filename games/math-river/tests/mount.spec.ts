@@ -142,6 +142,13 @@ describe('mathRiver.mount / unmount', () => {
     expect([...panel.children].indexOf(exitWrap(el))).toBeLessThan(
       [...panel.children].indexOf(below),
     );
+    // Trois boutons ronds identiques, et la même marge partout : bords du bandeau et entre eux.
+    const gear = gearOf(el);
+    for (const k of ['width', 'height', 'border', 'borderRadius', 'background'] as const)
+      expect(gear.style[k]).toBe(exit.style[k]);
+    expect(panel.style.padding).toBe('12px');
+    expect(panel.style.gap).toBe('12px');
+    expect(below.style.gap).toBe('12px');
     instance.unmount();
     expect(el.children).toHaveLength(0);
     const app = fakeApps[0]!;
