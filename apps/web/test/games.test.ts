@@ -36,3 +36,15 @@ describe('registre de jeux — math-river', () => {
     expect(game!.meta.instructions.length).toBeGreaterThan(0);
   });
 });
+
+describe('registre de jeux — joueurs', () => {
+  it('seul, en duel ou en équipe, selon le jeu', () => {
+    const players = Object.fromEntries(registry.list().map((m) => [m.meta.key, m.meta.players]));
+    expect(players).toEqual({
+      'rabbit-math': 'solo',
+      'passe-trappe': 'versus',
+      'tower-math': 'solo',
+      'math-river': 'coop',
+    });
+  });
+});
