@@ -14,6 +14,8 @@ const SETTLE_MS = 700;
 
 export interface Fish {
   readonly view: Container;
+  /** Ombre du poisson sur le fond, sous l'eau (à placer avec le fond des trous). */
+  readonly shadow: Container;
   position(): Vec;
   isStruggling(): boolean;
   /** Nage en rond dans le trou k (coordonnées du monde). */
@@ -29,10 +31,14 @@ export interface Fish {
 }
 
 /** Poisson dessiné tête vers la gauche (−x) : sa rotation suit sa direction de nage + π. */
-function drawFish(g: Graphics): void {
-  g.poly([22, 0, 40, -14, 36, 0, 40, 14])
+function drawTail(g: Graphics): void {
+  // Queue autour de son attache (0, 0) : elle bat en tournant autour de ce point.
+  g.poly([0, 0, 18, -14, 14, 0, 18, 14])
     .fill(COLORS.fishFin)
     .stroke({ width: 2.5, color: COLORS.fishLine, join: 'round' });
+}
+
+function drawFish(g: Graphics): void {
   g.ellipse(0, 0, 28, 15).fill(COLORS.fish).stroke({ width: 2.5, color: COLORS.fishLine });
   g.moveTo(-4, -14)
     .quadraticCurveTo(6, -24, 14, -12)
@@ -46,10 +52,18 @@ function drawFish(g: Graphics): void {
 export function createFish(): Fish {
   const view = new Container();
   view.label = 'fish';
-  const body = new Graphics();
-  drawFish(body);
+  const body = new Container();
+  const tail = new Graphics();
+  drawTail(tail);
+  tail.x = 22;
+  const torso = new Graphics();
+  drawFish(torso);
+  body.addChild(tail, torso);
   const splashes = new Graphics();
   view.addChild(splashes, body);
+  const shadow = new Container();
+  const shade = new Graphics().ellipse(0, 0, 34, 14).fill({ color: 0x0b2f44, alpha: 0.35 });
+  shadow.addChild(shade);
 
   let home = holeCenterOf(0);
   let angle = 0;
@@ -70,6 +84,10 @@ export function createFish(): Fish {
   const place = (p: Vec, heading: number, wiggle: number): void => {
     body.position.set(p.x, p.y);
     body.rotation = heading + Math.PI + wiggle;
+    // L'ombre tombe un peu plus loin sur le fond, comme sous une eau éclairée d'en haut.
+    shade.position.set(p.x + 10, p.y + 16);
+    shade.rotation = body.rotation;
+    tail.rotation = Math.sin(clock / (struggling ? 60 : 140)) * 0.45;
   };
   const lerp = (a: Vec, b: Vec, u: number): Vec => ({
     x: a.x + (b.x - a.x) * u,
@@ -84,6 +102,7 @@ export function createFish(): Fish {
 
   return {
     view,
+    shadow,
     position: () => ({ x: body.x, y: body.y }),
     isStruggling: () => struggling,
     swimIn,

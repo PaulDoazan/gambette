@@ -11,6 +11,9 @@ export const COLORS = {
   water: 0x3d9ad6,
   waterLight: 0x7fd3f5,
   waterEdge: 0x1f6fa8,
+  /** Fond du trou sous l'eau : sable mouillé et ses rides. */
+  floorSand: 0xc9a96e,
+  floorRidge: 0x8a6a3c,
   foam: 0xffffff,
   fish: 0xffa53a,
   fishFin: 0xff8a2a,
