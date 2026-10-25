@@ -52,10 +52,10 @@ const players = computed(() => playersBadge(props.meta.players));
 .game-card {
   display: block;
   width: 100%;
-  padding: 7px;
+  padding: 0;
   border: none;
-  border-radius: 30px;
-  background: #fff;
+  border-radius: 24px;
+  background: transparent;
   cursor: pointer;
   box-shadow: 0 10px 24px -14px rgba(0, 39, 75, 0.45);
   transition:
