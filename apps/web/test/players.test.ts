@@ -6,16 +6,16 @@ describe('pastille des joueurs', () => {
     expect(playersBadge('solo')).toEqual({ people: 1, mark: '', label: '1 joueur' });
   });
 
-  it('un duel : deux personnes et « 1v1 »', () => {
+  it('un duel : deux personnes séparées par « v »', () => {
     expect(playersBadge('versus')).toEqual({
       people: 2,
-      mark: '1v1',
+      mark: 'v',
       label: '2 joueurs, l’un contre l’autre',
     });
   });
 
-  it('en équipe : deux personnes et « 1+1 »', () => {
-    expect(playersBadge('coop')).toEqual({ people: 2, mark: '1+1', label: '2 joueurs, en équipe' });
+  it('en équipe : deux personnes séparées par « + »', () => {
+    expect(playersBadge('coop')).toEqual({ people: 2, mark: '+', label: '2 joueurs, en équipe' });
   });
 
   it('non précisé : comme un jeu seul', () => {

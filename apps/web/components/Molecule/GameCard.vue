@@ -32,7 +32,14 @@ const players = computed(() => playersBadge(props.meta.players));
 
       <span class="game-card__players" aria-hidden="true">
         <VIcon icon="mdi-account" size="20" />
-        <span v-if="players.mark" class="game-card__mark">{{ players.mark }}</span>
+        <!-- Le « + » de la police est trop petit à côté du « v » : icône à la place. -->
+        <VIcon
+          v-if="players.mark === '+'"
+          icon="mdi-plus-thick"
+          size="18"
+          class="game-card__plus"
+        />
+        <span v-else-if="players.mark" class="game-card__mark">{{ players.mark }}</span>
         <VIcon v-if="players.people === 2" icon="mdi-account" size="20" />
       </span>
 
@@ -90,7 +97,7 @@ const players = computed(() => playersBadge(props.meta.players));
   color: #fff;
 }
 
-/* Joueurs : une personne (seul), ou deux avec « 1v1 » (duel) ou « 1+1 » (équipe). */
+/* Joueurs : une personne (seul), ou deux séparées par « v » (duel) ou « + » (équipe). */
 .game-card__players {
   position: absolute;
   top: 8px;
@@ -107,9 +114,14 @@ const players = computed(() => playersBadge(props.meta.players));
 .game-card__mark {
   font-family: 'Raleway', sans-serif;
   font-weight: 800;
-  font-size: 0.9rem;
-  padding: 0 1px;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0 3px 2px;
   text-transform: none;
+}
+
+.game-card__plus {
+  margin: 0 2px;
 }
 
 /* Titre en bandeau, posé en bas de la vignette. */
