@@ -85,7 +85,8 @@ export const bucketHome = (player: Player, i: number): Vec =>
 const GRAB_RADIUS = BUCKET_RADIUS * 1.3;
 
 export function createGameScene(deps: {
-  pairs: readonly Pair[];
+  /** Sélection de calculs de chaque joueur. */
+  pairs: Record<Player, readonly Pair[]>;
   rng?: Rng;
   onWin(): void;
   /** L'interface s'efface (fin de manche) ou revient (manche suivante). */
@@ -125,7 +126,7 @@ export function createGameScene(deps: {
     ui.addChild(block.view, guide.view, ...buckets.map((b) => b.view));
     effects.addChild(block.sparks, ...buckets.map((b) => b.sparks));
     sides[pl] = {
-      calc: deps.pairs[0]!,
+      calc: deps.pairs[pl][0]!,
       correct: 0,
       buckets,
       block,
@@ -163,7 +164,7 @@ export function createGameScene(deps: {
   // Nouveau calcul et 5 seaux pleins ; en cours de partie, un éclat le signale.
   const renew = (pl: Player, flash: boolean): void => {
     const s = sides[pl];
-    s.calc = pickCalc(deps.pairs, s.calc, rng);
+    s.calc = pickCalc(deps.pairs[pl], s.calc, rng);
     s.block.setPair(s.calc);
     const labels = labelBuckets(s.calc, BUCKETS_PER_PLAYER, rng)!;
     s.correct = labels.correctIndex;

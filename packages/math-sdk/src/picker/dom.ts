@@ -29,12 +29,12 @@ const buildStyle = (): HTMLStyleElement => {
   return style;
 };
 
-const buildHeader = (): { wrap: HTMLDivElement; close: HTMLButtonElement } => {
+const buildHeader = (text: string): { wrap: HTMLDivElement; close: HTMLButtonElement } => {
   const wrap = document.createElement('div');
   wrap.className = 'cp-header';
   const title = document.createElement('h2');
   title.className = 'cp-title';
-  title.textContent = 'Choisis tes calculs';
+  title.textContent = text;
   const close = document.createElement('button');
   close.className = 'cp-close';
   close.textContent = '✕';
@@ -107,13 +107,16 @@ const buildFooter = (): {
   return { wrap, warn, back };
 };
 
-export const buildPicker = (initial: readonly Pair[]): PickerHandles => {
+export const buildPicker = (
+  initial: readonly Pair[],
+  title = 'Choisis tes calculs',
+): PickerHandles => {
   const root = document.createElement('div');
   root.className = 'cp-overlay';
   root.appendChild(buildStyle());
   const card = document.createElement('div');
   card.className = 'cp-card';
-  const { wrap: header, close: closeBtn } = buildHeader();
+  const { wrap: header, close: closeBtn } = buildHeader(title);
   const checkboxes: HTMLInputElement[] = [];
   const body = buildBody(initial, checkboxes);
   const { wrap: footer, warn, back: backBtn } = buildFooter();

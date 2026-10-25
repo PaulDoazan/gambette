@@ -1,14 +1,19 @@
-import { createCalcsStore, type Pair } from '@gambette/math-sdk';
+import {
+  createPlayersCalcsStore,
+  playersCalcsChanged,
+  type PlayersCalcs,
+} from '@gambette/math-sdk';
 import { DEFAULT_PUCKS, MAX_PUCKS, MIN_PUCKS } from '../config/dimensions';
 
 export const SETTINGS_KEY = 'gambette.passe-trappe.settings';
 
 export interface Settings {
   pucksPerPlayer: number;
-  selectedPairs: Pair[];
+  /** Calculs de chaque joueur, ou les mêmes pour les deux. */
+  calcs: PlayersCalcs;
 }
 
-const calcs = createCalcsStore('passe-trappe');
+const calcs = createPlayersCalcsStore('passe-trappe');
 
 const clampPucks = (n: number): number => Math.max(MIN_PUCKS, Math.min(MAX_PUCKS, Math.round(n)));
 
@@ -23,11 +28,11 @@ const readPucks = (): number => {
 };
 
 export function loadSettings(): Settings {
-  return { pucksPerPlayer: readPucks(), selectedPairs: calcs.load() };
+  return { pucksPerPlayer: readPucks(), calcs: calcs.load() };
 }
 
 export function saveSettings(s: Settings): void {
-  calcs.save(s.selectedPairs);
+  calcs.save(s.calcs);
   try {
     localStorage.setItem(
       SETTINGS_KEY,
@@ -38,13 +43,6 @@ export function saveSettings(s: Settings): void {
   }
 }
 
-const pairKey = (p: Pair): string => `${p.op}:${p.a}:${p.b}`;
-
 export function settingsChanged(a: Settings, b: Settings): boolean {
-  if (a.pucksPerPlayer !== b.pucksPerPlayer) return true;
-  const ka = new Set(a.selectedPairs.map(pairKey));
-  return (
-    a.selectedPairs.length !== b.selectedPairs.length ||
-    !b.selectedPairs.every((p) => ka.has(pairKey(p)))
-  );
+  return a.pucksPerPlayer !== b.pucksPerPlayer || playersCalcsChanged(a.calcs, b.calcs);
 }

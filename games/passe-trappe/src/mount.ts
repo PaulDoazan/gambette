@@ -6,7 +6,7 @@ import {
   type GameContext,
   type GameInstance,
 } from '@gambette/game-sdk';
-import { openCalcsPicker } from '@gambette/math-sdk';
+import { openCalcsPicker, pairsOf } from '@gambette/math-sdk';
 import { createApp } from './core/App';
 import { createPhysicsWorld } from './core/PhysicsWorld';
 import { createGameScene, type GameScene } from './scenes/GameScene';
@@ -82,7 +82,7 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
       game = createGameScene({
         physics,
         pucksPerPlayer: settings.pucksPerPlayer,
-        pairs: settings.selectedPairs,
+        pairs: pairsOf(settings.calcs),
         onWin: (winner) => {
           // L'écran de victoire a son propre « Quitter » : celui du SDK le chevaucherait.
           hideExit();
@@ -124,7 +124,8 @@ export async function mountPasseTrappe(el: HTMLElement, ctx: GameContext): Promi
       game.drag.reset();
       panel = createSettingsScene({
         initial: settings,
-        onOpenCalcsPicker: (current) => openCalcsPicker({ initial: current, container: el }),
+        onOpenCalcsPicker: (current, title) =>
+          openCalcsPicker({ initial: current, container: el, title }),
         onClose: (next) => {
           closePanel();
           revealExitSoon();

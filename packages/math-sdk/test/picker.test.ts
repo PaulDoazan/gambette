@@ -54,3 +54,17 @@ describe('openCalcsPicker', () => {
     expect(document.querySelector('.cp-overlay')).toBeNull();
   });
 });
+
+describe('openCalcsPicker, titre', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('titre par défaut, ou celui fourni', () => {
+    void openCalcsPicker({ initial: INITIAL });
+    expect(document.querySelector('.cp-title')!.textContent).toBe('Choisis tes calculs');
+    document.body.innerHTML = '';
+    void openCalcsPicker({ initial: INITIAL, title: 'Calculs du joueur du haut' });
+    expect(document.querySelector('.cp-title')!.textContent).toBe('Calculs du joueur du haut');
+  });
+});

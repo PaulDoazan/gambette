@@ -124,7 +124,8 @@ const nudgeIfStuck = (puck: Puck): void => {
 export function createGameScene(deps: {
   physics: PhysicsWorld;
   pucksPerPlayer: number;
-  pairs: readonly Pair[];
+  /** Sélection de calculs de chaque joueur. */
+  pairs: Record<Player, readonly Pair[]>;
   rng?: Rng;
   onWin(player: Player): void;
 }): GameScene {
@@ -173,7 +174,7 @@ export function createGameScene(deps: {
   // Nouveau calcul pour un camp et ré-étiquetage de tous ses palets ; en cours de partie
   // (`flash`), un éclat signale le changement sur le calcul et chaque chiffre.
   const renewCamp = (pl: Player, flash = false): void => {
-    calcs[pl] = pickCalc(deps.pairs, (calcs[pl] as Pair | undefined) ?? null, rng);
+    calcs[pl] = pickCalc(deps.pairs[pl], (calcs[pl] as Pair | undefined) ?? null, rng);
     blocks[pl].setPair(calcs[pl]);
     const inCamp = inCampOf(pl);
     const labels = labelCamp(calcs[pl], inCamp.length, rng);

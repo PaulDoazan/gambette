@@ -14,7 +14,7 @@ const PAIRS: Pair[] = [
 ];
 
 const make = (onWin = vi.fn(), onUiHidden = vi.fn()) => ({
-  scene: createGameScene({ pairs: PAIRS, rng: mulberry32(3), onWin, onUiHidden }),
+  scene: createGameScene({ pairs: { A: PAIRS, B: PAIRS }, rng: mulberry32(3), onWin, onUiHidden }),
   onWin,
   onUiHidden,
 });
@@ -62,6 +62,18 @@ const fillHole = (scene: Scene): void => {
 };
 
 describe('GameScene', () => {
+  it('calculs séparés : chaque joueur tire dans sa propre sélection', () => {
+    const B: Pair[] = [{ a: 2, b: 5, op: 'add' }];
+    const scene = createGameScene({ pairs: { A: PAIRS, B }, rng: mulberry32(3), onWin: vi.fn() });
+    for (let k = 0; k < 6; k++) {
+      expect(PAIRS).toContainEqual(scene.calc('A'));
+      expect(scene.calc('B')).toEqual(B[0]);
+      throwBucket(scene, 'A', scene.correctIndex('A'), holeCenter());
+      throwBucket(scene, 'B', scene.correctIndex('B'), holeCenter());
+      run(scene, MAX_FLIGHT);
+    }
+  });
+
   it('chaque joueur a son calcul et 5 seaux, dont un seul porte la bonne réponse', () => {
     const { scene } = make();
     for (const pl of ['A', 'B'] as const) {

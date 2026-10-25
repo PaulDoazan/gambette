@@ -50,14 +50,18 @@ interface FakeScene {
   tick: Fn;
   reset: Fn;
   destroy: Fn;
-  pairs: readonly unknown[];
+  pairs: { A: readonly unknown[]; B: readonly unknown[] };
   win(): void;
   uiHidden(hidden: boolean): void;
 }
 const { fakeScenes } = vi.hoisted(() => ({ fakeScenes: [] as unknown[] }));
 vi.mock('../src/scenes/GameScene', () => ({
   createGameScene: vi.fn(
-    (deps: { onWin(): void; onUiHidden?(hidden: boolean): void; pairs: readonly unknown[] }) => {
+    (deps: {
+      onWin(): void;
+      onUiHidden?(hidden: boolean): void;
+      pairs: { A: readonly unknown[]; B: readonly unknown[] };
+    }) => {
       const scene = {
         view: new Container(),
         pairs: deps.pairs,
@@ -88,6 +92,7 @@ vi.mock('@gambette/math-sdk', async (importOriginal) => {
 });
 
 const { mathRiver } = await import('../src/index');
+const { openCalcsPicker } = await import('@gambette/math-sdk');
 const ctx = (): GameContext => ({ locale: 'fr', onExit: vi.fn() });
 const scene0 = (): FakeScene => fakeScenes[0] as FakeScene;
 const exitWrap = (el: HTMLElement): HTMLElement =>
@@ -276,10 +281,35 @@ describe('réglages', () => {
     tapIn(stage, 'close');
     expect(fakeScenes).toHaveLength(2);
     expect(scene0().destroy).toHaveBeenCalled();
-    expect((fakeScenes[1] as FakeScene).pairs).toEqual([{ a: 2, b: 3, op: 'add' }]);
+    expect((fakeScenes[1] as FakeScene).pairs).toEqual({
+      A: [{ a: 2, b: 3, op: 'add' }],
+      B: [{ a: 2, b: 3, op: 'add' }],
+    });
     expect(JSON.parse(localStorage.getItem('gambette.math-river.calcs')!)).toEqual([
       { a: 2, b: 3, op: 'add' },
     ]);
+    instance.unmount();
+  });
+
+  it('calculs séparés : chaque joueur reçoit sa sélection, titre du sélecteur, choix conservé', async () => {
+    localStorage.setItem('gambette.math-river.calcs', JSON.stringify([{ a: 6, b: 8, op: 'mul' }]));
+    const el = document.createElement('div');
+    const instance = await mathRiver.mount(el, ctx());
+    const { stage } = fakeApps[0]!;
+    gearOf(el).click();
+    tapIn(stage, 'same');
+    tapIn(stage, 'calcsB');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(vi.mocked(openCalcsPicker)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: 'Calculs du joueur du haut' }),
+    );
+    tapIn(stage, 'close');
+    expect((fakeScenes[1] as FakeScene).pairs).toEqual({
+      A: [{ a: 6, b: 8, op: 'mul' }],
+      B: [{ a: 2, b: 3, op: 'add' }],
+    });
+    expect(localStorage.getItem('gambette.math-river.calcs.same')).toBe('false');
     instance.unmount();
   });
 });

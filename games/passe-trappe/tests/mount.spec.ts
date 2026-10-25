@@ -39,6 +39,12 @@ vi.mock('@gambette/game-sdk', async (importOriginal) => {
   };
 });
 
+// Sélecteur de calculs simulé : renvoie une autre sélection.
+vi.mock('@gambette/math-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@gambette/math-sdk')>();
+  return { ...actual, openCalcsPicker: vi.fn(async () => [{ a: 2, b: 3, op: 'add' }]) };
+});
+
 // Scène de jeu simulée : permet de déclencher une victoire sans piloter la physique.
 interface FakeScene {
   view: Container;
@@ -48,6 +54,7 @@ interface FakeScene {
   destroy: ReturnType<typeof vi.fn>;
   win(player: Player): void;
   pucksPerPlayer: number;
+  pairs: unknown;
 }
 const { fakeScenes, order } = vi.hoisted(() => ({
   fakeScenes: [] as unknown[],
@@ -58,6 +65,7 @@ vi.mock('../src/scenes/GameScene', () => ({
     (deps: {
       onWin(player: Player): void;
       pucksPerPlayer: number;
+      pairs: unknown;
       physics: { destroy(): void };
     }) => {
       const realDestroy = deps.physics.destroy.bind(deps.physics);
@@ -68,6 +76,7 @@ vi.mock('../src/scenes/GameScene', () => ({
       const scene = {
         view: new Container(),
         pucksPerPlayer: deps.pucksPerPlayer,
+        pairs: deps.pairs,
         drag: { pointerDown: vi.fn(), pointerMove: vi.fn(), pointerUp: vi.fn(), reset: vi.fn() },
         tick: vi.fn(),
         reset: vi.fn(),
@@ -392,5 +401,37 @@ describe('boutons du SDK après un écran en surimpression', () => {
     stage.getChildByLabel('replay', true)!.emit('pointertap', {} as FederatedPointerEvent);
     instance.unmount();
     expect(() => vi.advanceTimersByTime(EXIT_REVEAL_DELAY_MS * 2)).not.toThrow();
+  });
+});
+
+describe('réglages — calculs par joueur', () => {
+  const tap = (c: Container, label: string): void => {
+    c.getChildByLabel(label, true)!.emit('pointertap', {} as FederatedPointerEvent);
+  };
+
+  it('calculs séparés : chaque joueur reçoit sa sélection, titre du sélecteur, choix conservé', async () => {
+    localStorage.setItem(
+      'gambette.passe-trappe.calcs',
+      JSON.stringify([{ a: 6, b: 8, op: 'mul' }]),
+    );
+    const el = document.createElement('div');
+    const instance = await passeTrappe.mount(el, ctx());
+    el.querySelector<HTMLButtonElement>('[data-test="passe-trappe-settings"]')!.click();
+    const panel = fakeApps[0]!.stage.getChildByLabel('settings', true) as Container;
+    tap(panel, 'same');
+    tap(panel, 'calcsB');
+    await Promise.resolve();
+    await Promise.resolve();
+    const { openCalcsPicker } = await import('@gambette/math-sdk');
+    expect(vi.mocked(openCalcsPicker)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: 'Calculs du joueur du haut' }),
+    );
+    tap(panel, 'close');
+    expect((fakeScenes[1] as FakeScene).pairs).toEqual({
+      A: [{ a: 6, b: 8, op: 'mul' }],
+      B: [{ a: 2, b: 3, op: 'add' }],
+    });
+    expect(localStorage.getItem('gambette.passe-trappe.calcs.same')).toBe('false');
+    instance.unmount();
   });
 });

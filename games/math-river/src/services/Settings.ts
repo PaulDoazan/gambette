@@ -1,25 +1,24 @@
-import { createCalcsStore, type Pair } from '@gambette/math-sdk';
+import {
+  createPlayersCalcsStore,
+  playersCalcsChanged,
+  type PlayersCalcs,
+} from '@gambette/math-sdk';
 
 export interface Settings {
-  selectedPairs: Pair[];
+  /** Calculs de chaque joueur, ou les mêmes pour les deux. */
+  calcs: PlayersCalcs;
 }
 
-const calcs = createCalcsStore('math-river');
+const calcs = createPlayersCalcsStore('math-river');
 
 export function loadSettings(): Settings {
-  return { selectedPairs: calcs.load() };
+  return { calcs: calcs.load() };
 }
 
 export function saveSettings(s: Settings): void {
-  calcs.save(s.selectedPairs);
+  calcs.save(s.calcs);
 }
 
-const pairKey = (p: Pair): string => `${p.op}:${p.a}:${p.b}`;
-
 export function settingsChanged(a: Settings, b: Settings): boolean {
-  const ka = new Set(a.selectedPairs.map(pairKey));
-  return (
-    a.selectedPairs.length !== b.selectedPairs.length ||
-    !b.selectedPairs.every((p) => ka.has(pairKey(p)))
-  );
+  return playersCalcsChanged(a.calcs, b.calcs);
 }

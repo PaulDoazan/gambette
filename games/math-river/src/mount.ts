@@ -6,7 +6,7 @@ import {
   type GameContext,
   type GameInstance,
 } from '@gambette/game-sdk';
-import { openCalcsPicker } from '@gambette/math-sdk';
+import { openCalcsPicker, pairsOf } from '@gambette/math-sdk';
 import { createApp } from './core/App';
 import { createGameScene, type GameScene } from './scenes/GameScene';
 import { createSettingsScene, type SettingsScene } from './scenes/SettingsScene';
@@ -92,7 +92,7 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
     let game: GameScene | null = null;
     const startGame = (): void => {
       game = createGameScene({
-        pairs: settings.selectedPairs,
+        pairs: pairsOf(settings.calcs),
         // Fin de manche : le bandeau s'efface avec les seaux et revient avec eux (aucun tap ne
         // précède son retour, pas besoin de délai).
         onUiHidden: (hidden) => (hidden ? hideExit() : setButtonsHidden(false)),
@@ -136,7 +136,8 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
       game.releaseAll();
       panel = createSettingsScene({
         initial: settings,
-        onOpenCalcsPicker: (current) => openCalcsPicker({ initial: current, container: el }),
+        onOpenCalcsPicker: (current, title) =>
+          openCalcsPicker({ initial: current, container: el, title }),
         onClose: (next) => {
           closePanel();
           revealExitSoon();
