@@ -16,6 +16,7 @@
   "dependencies": {
     "@gambette/game-sdk": "workspace:*",
     "@gambette/math-sdk": "workspace:*",
+    "pixi-filters": "^6.1.5",
     "pixi.js": "^8.18.1"
   },
   "devDependencies": {

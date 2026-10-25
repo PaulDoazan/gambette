@@ -20,6 +20,7 @@ import { createBeach } from '../entities/Beach';
 import { createBucket, type Bucket } from '../entities/Bucket';
 import { createCalcBlock, type CalcBlock } from '../entities/CalcBlock';
 import { createFish } from '../entities/Fish';
+import { createWaterFx } from '../entities/WaterFx';
 import { createPool, waterRadius } from '../entities/Pool';
 import { createPuddle, createWaterShot } from '../entities/Splash';
 import { createSea } from '../entities/Sea';
@@ -104,7 +105,18 @@ export function createGameScene(deps: {
   const water = createWater(ROUNDS[0]!);
   const pools = ROUNDS.map((_, k) => createPool(k, START_LEVEL));
   const fish = createFish();
-  world.addChild(beach.view, sea.view, ...pools.map((p) => p.view), fish.view);
+  // Tout ce qui est dans l'eau ondule ensemble : fond des trous, poisson, surface, canaux, mer.
+  const aquatic = new Container();
+  aquatic.label = 'aquatic';
+  aquatic.addChild(
+    sea.view,
+    ...pools.map((p) => p.floor),
+    fish.shadow,
+    fish.view,
+    ...pools.map((p) => p.view),
+  );
+  const waterFx = createWaterFx(aquatic, world);
+  world.addChild(beach.view, aquatic, ...pools.map((p) => p.marks));
   const ui = new Container();
   ui.label = 'ui';
   const ground = new Container(); // flaques, sous les seaux
@@ -228,6 +240,7 @@ export function createGameScene(deps: {
     if (inHole(f.to, holeRadius())) {
       water.pour();
       pool().ripple({ x: f.to.x + camera, y: f.to.y });
+      waterFx.splash({ x: f.to.x + camera, y: f.to.y });
     } else {
       addPuddle(f.to, pl);
     }
@@ -391,6 +404,7 @@ export function createGameScene(deps: {
         p.update(k < round ? 1 : k > round ? START_LEVEL : water.level(), deltaMs);
       });
       sea.update(deltaMs);
+      waterFx.update(deltaMs);
       const shown = pool().shownLevel();
       fish.update(deltaMs, shown, waterRadius(shown, round));
       puddles = puddles.filter((p) => {
