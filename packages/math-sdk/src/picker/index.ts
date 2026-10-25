@@ -5,6 +5,8 @@ export interface CalcsPickerOptions {
   initial: readonly Pair[];
   /** Élément hôte de l'overlay (défaut : document.body). Le jeu y passe sa racine. */
   container?: HTMLElement;
+  /** Titre du sélecteur (défaut : « Choisis tes calculs »), par exemple le joueur concerné. */
+  title?: string | undefined;
 }
 
 const NO_SELECTION_MSG = 'Sélectionne au moins un calcul.';
@@ -55,7 +57,7 @@ const installCloseHandlers = (h: PickerHandles, resolve: (pairs: Pair[]) => void
 export function openCalcsPicker(opts: CalcsPickerOptions): Promise<Pair[]> {
   return new Promise<Pair[]>((resolve) => {
     const initial = [...opts.initial];
-    const handles = buildPicker(initial);
+    const handles = buildPicker(initial, opts.title);
     (opts.container ?? document.body).appendChild(handles.root);
     installCheckboxListeners(handles);
     updateCloseAvailability(handles);
