@@ -68,3 +68,50 @@ describe('openCalcsPicker, titre', () => {
     expect(document.querySelector('.cp-title')!.textContent).toBe('Calculs du joueur du haut');
   });
 });
+
+describe('openCalcsPicker, tables repliables', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+  const sectionOf = (root: ParentNode, a: number, op = 'mul') =>
+    root.querySelector<HTMLElement>(`.cp-panel[data-op="${op}"] .cp-section[data-a="${a}"]`)!;
+  const toggleOf = (s: HTMLElement) => s.querySelector<HTMLButtonElement>('.cp-section-toggle')!;
+  const rowsOf = (s: HTMLElement) => s.querySelector<HTMLElement>('.cp-section-rows')!;
+
+  it('chaque table est repliée au départ', () => {
+    void openCalcsPicker({ initial: INITIAL });
+    const s = sectionOf(document, 7);
+    expect(rowsOf(s).hidden).toBe(true);
+    expect(toggleOf(s).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('toucher l’en-tête déplie la table, le toucher encore la replie ; les autres ne bougent pas', () => {
+    void openCalcsPicker({ initial: INITIAL });
+    const s7 = sectionOf(document, 7);
+    toggleOf(s7).click();
+    expect(rowsOf(s7).hidden).toBe(false);
+    expect(toggleOf(s7).getAttribute('aria-expanded')).toBe('true');
+    expect(rowsOf(sectionOf(document, 8)).hidden).toBe(true);
+    toggleOf(s7).click();
+    expect(rowsOf(s7).hidden).toBe(true);
+  });
+
+  it('l’en-tête montre combien de calculs sont choisis, à jour', () => {
+    void openCalcsPicker({ initial: INITIAL });
+    const s7 = sectionOf(document, 7);
+    const count = s7.querySelector('.cp-section-count')!;
+    expect(count.textContent).toBe('1/10');
+    check(box(document, 7, 9, 'mul'), true);
+    expect(count.textContent).toBe('2/10');
+    expect(sectionOf(document, 6).querySelector('.cp-section-count')!.textContent).toBe('0/10');
+  });
+
+  it('la case de l’en-tête coche toute la table sans la déplier', () => {
+    void openCalcsPicker({ initial: INITIAL });
+    const s6 = sectionOf(document, 6);
+    const all = s6.querySelector<HTMLInputElement>('.cp-section-header input[type="checkbox"]')!;
+    check(all, true);
+    expect(s6.querySelector('.cp-section-count')!.textContent).toBe('10/10');
+    expect(rowsOf(s6).hidden).toBe(true);
+  });
+});

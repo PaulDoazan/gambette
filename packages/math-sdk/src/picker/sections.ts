@@ -49,28 +49,52 @@ const buildRow = (
   return { row, cb };
 };
 
-const buildSectionHeader = (a: number): { header: HTMLLabelElement; cb: HTMLInputElement } => {
-  const header = document.createElement('label');
+/**
+ * En-tête d'une table : la case coche toute la table ; le reste de la ligne (nom, nombre de
+ * calculs choisis, flèche) la déplie ou la replie.
+ */
+const buildSectionHeader = (
+  a: number,
+): {
+  header: HTMLDivElement;
+  cb: HTMLInputElement;
+  toggle: HTMLButtonElement;
+  count: HTMLSpanElement;
+} => {
+  const header = document.createElement('div');
   header.className = 'cp-section-header';
   const cb = document.createElement('input');
   cb.type = 'checkbox';
+  cb.setAttribute('aria-label', `Toute la table de ${a}`);
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'cp-section-toggle';
+  toggle.setAttribute('aria-expanded', 'false');
   const text = document.createElement('span');
+  text.className = 'cp-section-name';
   text.textContent = `Table de ${a}`;
-  header.append(cb, text);
-  return { header, cb };
+  const count = document.createElement('span');
+  count.className = 'cp-section-count';
+  const chevron = document.createElement('span');
+  chevron.className = 'cp-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '▸';
+  toggle.append(text, count, chevron);
+  header.append(cb, toggle);
+  return { header, cb, toggle, count };
 };
 
 const buildSectionRows = (
   a: number,
   op: Op,
-  section: HTMLDivElement,
+  container: HTMLDivElement,
   has: Set<string>,
   out: HTMLInputElement[],
 ): HTMLInputElement[] => {
   const rows: HTMLInputElement[] = [];
   for (const b of MULTIPLIERS) {
     const { row, cb } = buildRow(a, b, op, has.has(pairKey(a, b, op)));
-    section.appendChild(row);
+    container.appendChild(row);
     rows.push(cb);
     out.push(cb);
   }
@@ -79,15 +103,21 @@ const buildSectionRows = (
 
 const syncHeaderFromRows = (
   headerCb: HTMLInputElement,
+  count: HTMLSpanElement,
   rows: readonly HTMLInputElement[],
 ): void => {
   const checkedCount = rows.filter((r) => r.checked).length;
   headerCb.checked = checkedCount === rows.length;
   headerCb.indeterminate = checkedCount > 0 && checkedCount < rows.length;
+  count.textContent = `${checkedCount}/${rows.length}`;
 };
 
-const wireSectionToggle = (headerCb: HTMLInputElement, rows: readonly HTMLInputElement[]): void => {
-  syncHeaderFromRows(headerCb, rows);
+const wireSectionToggle = (
+  headerCb: HTMLInputElement,
+  count: HTMLSpanElement,
+  rows: readonly HTMLInputElement[],
+): void => {
+  syncHeaderFromRows(headerCb, count, rows);
   headerCb.addEventListener('change', () => {
     const target = headerCb.checked;
     for (const r of rows) {
@@ -96,8 +126,22 @@ const wireSectionToggle = (headerCb: HTMLInputElement, rows: readonly HTMLInputE
     }
   });
   for (const r of rows) {
-    r.addEventListener('change', () => syncHeaderFromRows(headerCb, rows));
+    r.addEventListener('change', () => syncHeaderFromRows(headerCb, count, rows));
   }
+};
+
+/** Table repliée au départ : on la déplie pour choisir ses calculs un par un. */
+const wireCollapse = (
+  section: HTMLDivElement,
+  toggle: HTMLButtonElement,
+  rows: HTMLDivElement,
+): void => {
+  rows.hidden = true;
+  toggle.addEventListener('click', () => {
+    rows.hidden = !rows.hidden;
+    toggle.setAttribute('aria-expanded', String(!rows.hidden));
+    section.classList.toggle('cp-section-open', !rows.hidden);
+  });
 };
 
 const buildSection = (
@@ -108,10 +152,14 @@ const buildSection = (
 ): HTMLDivElement => {
   const section = document.createElement('div');
   section.className = 'cp-section';
-  const { header, cb: headerCb } = buildSectionHeader(a);
-  section.appendChild(header);
-  const rows = buildSectionRows(a, op, section, has, checkboxes);
-  wireSectionToggle(headerCb, rows);
+  section.dataset.a = String(a);
+  const { header, cb: headerCb, toggle, count } = buildSectionHeader(a);
+  const rowsWrap = document.createElement('div');
+  rowsWrap.className = 'cp-section-rows';
+  section.append(header, rowsWrap);
+  const rows = buildSectionRows(a, op, rowsWrap, has, checkboxes);
+  wireSectionToggle(headerCb, count, rows);
+  wireCollapse(section, toggle, rowsWrap);
   return section;
 };
 
