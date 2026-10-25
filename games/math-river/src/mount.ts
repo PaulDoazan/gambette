@@ -1,6 +1,7 @@
 import type { FederatedPointerEvent, Ticker } from 'pixi.js';
 import { Rectangle } from 'pixi.js';
 import {
+  ROUND_BUTTON_CSS,
   createExitButton,
   installOrientationLock,
   type GameContext,
@@ -23,7 +24,7 @@ export const EXIT_REVEAL_DELAY_MS = 400;
 
 /** Engrenage au trait fin (Lucide « settings »), comme passe-trappe. */
 const GEAR_ICON =
-  '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" ' +
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" ' +
   'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
   '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08' +
   'a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74' +
@@ -60,7 +61,7 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
     const band = document.createElement('div');
     band.style.cssText =
       'position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:6;' +
-      'display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px 12px;' +
+      'display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;' +
       'background:#00274b;border-radius:0 20px 20px 0;';
     const leftButtons = document.createElement('div');
     leftButtons.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;';
@@ -156,9 +157,8 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
     gear.innerHTML = GEAR_ICON;
     gear.setAttribute('aria-label', 'Choisir les réglages');
     gear.title = 'Choisir les réglages';
-    gear.style.cssText =
-      'display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;' +
-      'border:none;border-radius:999px;cursor:pointer;background-color:transparent;color:#fff;';
+    // Même bouton rond que la croix et le plein écran du SDK.
+    gear.style.cssText = ROUND_BUTTON_CSS;
     gear.addEventListener('click', openSettings);
     cleanups.push(() => {
       closePanel();

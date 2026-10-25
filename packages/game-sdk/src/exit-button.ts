@@ -26,8 +26,11 @@ const ICON_CLOSE =
   'stroke-width="2.5" stroke-linecap="round" aria-hidden="true">' +
   '<path d="M6 6l12 12M18 6L6 18"/></svg>';
 
-/** Bouton rond du plein écran ; « Quitter » en icône seule a exactement la même taille. */
-const ROUND_BUTTON_CSS =
+/**
+ * Bouton rond du plein écran ; « Quitter » en icône seule a exactement la même taille. Exporté
+ * pour que les boutons propres à un jeu (engrenage…) s'alignent sur eux.
+ */
+export const ROUND_BUTTON_CSS =
   'display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;' +
   'border:1px solid rgba(255,255,255,0.4);border-radius:999px;cursor:pointer;' +
   'background:rgba(255,255,255,0.12);color:#fff;';
