@@ -68,12 +68,13 @@ seaux pour être rempli.
   seaux, les panneaux de calcul et les visées restent fixes à l'écran, hors du monde.
 - **Rayons des trous** : 160, 190 et 220 px. Le niveau de l'eau garde la même échelle (0 = fond,
   1 = canal), avec un rayon d'eau proportionnel au trou.
-- **Durée (validée par Paul)** : pour une paire qui réussit un bon seau toutes les 6 s chacun,
-  la manche 1 dure environ 1 min, la manche 2 environ 1 min 30 et la manche 3 environ 2 min, soit
-  4 à 5 min de partie. L'apport d'un bon seau W_k et l'infiltration D_k diminuent avec la taille du
-  trou. Les deux sont réglés pour qu'une paire lente, à un bon seau toutes les 8 s pour les deux
-  joueurs, finisse toujours chaque manche. Les valeurs sont calculées dans le plan, à calibrer
-  ensuite sur un vrai téléphone.
+- **Durée (revue par Paul le 25/10)** : la version à 1 min / 1 min 30 / 2 min était beaucoup trop
+  longue. On reprend le réglage du jeu à un trou : infiltration de 0,018 par seconde à chaque
+  manche, et 0,12 par bon seau dans le premier trou. Les joueurs doivent aller assez vite pour
+  remplir le trou. Les trous 2 et 3 reçoivent un peu moins par seau (0,105 puis 0,095), pour que
+  chaque manche reste un peu plus longue : environ 36 s, 47 s et 58 s pour une paire qui réussit un
+  bon seau toutes les 6 s chacun. Une paire trop lente voit l'eau redescendre, sans jamais passer
+  sous le plancher.
 - **Canal entre deux trous** : une seule courbe en S, du bord droit du trou k au bord gauche du
   trou k+1. Elle passe à mi-hauteur à la frontière des deux écrans et y est horizontale, pour que
   chaque écran, vu seul, montre un canal qui sort proprement du cadre. On part de `main` : le

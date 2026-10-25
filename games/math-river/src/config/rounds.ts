@@ -11,17 +11,27 @@ export interface RoundSpec {
 }
 
 /**
- * Calibrage : à un bon seau toutes les 3 s pour la paire, une manche de `seconds` secondes fait
- * monter l'eau de 0,2 à 1. L'infiltration vaut 1/12 d'un seau par seconde : une paire lente, à un
- * bon seau toutes les 8 s, progresse toujours (pas de défaite).
+ * Infiltration du jeu à un trou, la même à chaque manche : sans bons seaux réguliers, l'eau
+ * redescend, il faut se dépêcher (elle ne descend jamais sous `MIN_LEVEL`, pas de défaite).
  */
-const round = (holeRadius: number, seconds: number): RoundSpec => {
-  const perBucket = 3.2 / seconds;
-  return { holeRadius, perBucket, drainPerSecond: perBucket / 12 };
-};
+const DRAIN_PER_SECOND = 0.018;
+
+/**
+ * Calibrage : à un bon seau toutes les 3 s pour la paire, l'eau monte de 0,2 à 1 en ≈ 36 s dans
+ * le premier trou (réglage du jeu à un trou), ≈ 47 s puis ≈ 58 s dans les suivants, plus grands.
+ */
+const round = (holeRadius: number, perBucket: number): RoundSpec => ({
+  holeRadius,
+  perBucket,
+  drainPerSecond: DRAIN_PER_SECOND,
+});
 
 /** Trois trous de plus en plus grands ; le dernier débouche sur la mer. */
-export const ROUNDS: readonly RoundSpec[] = [round(160, 60), round(190, 90), round(220, 120)];
+export const ROUNDS: readonly RoundSpec[] = [
+  round(160, 0.12),
+  round(190, 0.105),
+  round(220, 0.095),
+];
 export const LAST_ROUND = ROUNDS.length - 1;
 
 /** Effacement (et retour) de l'interface en fin de manche, puis trajet de la caméra. */
