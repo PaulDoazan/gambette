@@ -6,6 +6,7 @@ export const mathRiver: GameModule = {
     key: 'math-river',
     name: 'Math River',
     description: 'Un jeu à deux, en équipe : de trou en trou, menez le poisson jusqu’à la mer !',
+    players: 'coop',
     instructions:
       'Posez le téléphone entre vous, chacun face à ses seaux. Résolvez votre calcul et tirez ' +
       'le seau qui porte la bonne réponse vers vous, puis relâchez pour lancer l’eau dans le ' +

@@ -14,6 +14,11 @@ export interface GameMeta {
   instructions: string;
   /** Visuel de la carte du menu (URL). */
   thumbnail?: string;
+  /**
+   * Joueurs : seul (`solo`), deux l'un contre l'autre (`versus`) ou deux en équipe (`coop`).
+   * Non précisé : seul.
+   */
+  players?: 'solo' | 'versus' | 'coop';
 }
 
 export interface GameInstance {
