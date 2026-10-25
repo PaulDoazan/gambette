@@ -198,3 +198,62 @@ describe('createExitButton — setHidden', () => {
     btn.dispose();
   });
 });
+
+describe('createExitButton — option iconOnly', () => {
+  it('une grande croix seule, dans un bouton rond de la taille du plein écran', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {}, { iconOnly: true });
+    const exit = parent.querySelector<HTMLButtonElement>('[data-test="game-exit"]')!;
+    expect(exit.textContent).toBe('');
+    expect(exit.querySelector('svg')).not.toBeNull();
+    expect(exit.getAttribute('aria-label')).toBe('Quitter');
+    expect(exit.style.width).toBe('34px');
+    expect(exit.style.height).toBe('34px');
+    btn.dispose();
+  });
+
+  it('sans l’option : « ✕ Quitter » en texte, comme avant', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {});
+    expect(parent.querySelector('[data-test="game-exit"]')!.textContent).toBe('✕ Quitter');
+    btn.dispose();
+  });
+
+  it('la confirmation fonctionne toujours', () => {
+    const parent = document.createElement('div');
+    const onExit = vi.fn();
+    const btn = createExitButton(parent, onExit, { iconOnly: true });
+    parent.querySelector<HTMLButtonElement>('[data-test="game-exit"]')!.click();
+    parent.querySelector<HTMLButtonElement>('[data-test="game-exit-go"]')!.click();
+    expect(onExit).toHaveBeenCalledTimes(1);
+    btn.dispose();
+  });
+});
+
+describe('createExitButton — placement inline', () => {
+  it('pas de position imposée : le jeu le place dans sa propre colonne', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {}, { placement: 'inline' });
+    const wrap = parent.firstElementChild as HTMLElement;
+    expect(wrap.style.position).toBe('relative');
+    expect(wrap.style.top).toBe('');
+    expect(wrap.style.left).toBe('');
+    btn.dispose();
+  });
+
+  it('la confirmation s’ouvre par-dessus, sans déplacer la colonne', () => {
+    const parent = document.createElement('div');
+    const btn = createExitButton(parent, () => {}, { placement: 'inline', iconOnly: true });
+    const exit = parent.querySelector<HTMLElement>('[data-test="game-exit"]')!;
+    const panel = parent.querySelector<HTMLElement>('[data-test="game-exit-confirm-panel"]')!;
+    exit.click();
+    expect(panel.style.display).toBe('flex');
+    expect(panel.style.position).toBe('absolute');
+    expect(exit.style.display).not.toBe('none');
+    expect(exit.style.visibility).toBe('hidden');
+    parent.querySelector<HTMLButtonElement>('[data-test="game-exit-cancel"]')!.click();
+    expect(panel.style.display).toBe('none');
+    expect(exit.style.visibility).toBe('');
+    btn.dispose();
+  });
+});
