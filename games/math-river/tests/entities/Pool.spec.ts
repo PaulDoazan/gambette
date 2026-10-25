@@ -22,3 +22,15 @@ describe('createPool', () => {
     expect(() => pool.update(0.5, 16)).not.toThrow();
   });
 });
+
+describe('Pool.waterShape', () => {
+  it('contour de l’eau, à la taille du niveau affiché', async () => {
+    const { createPool } = await import('../../src/entities/Pool');
+    const { holeCenterOf } = await import('../../src/config/rounds');
+    const pool = createPool(0, 1);
+    const pts = pool.waterShape();
+    const c = holeCenterOf(0);
+    const r = Math.hypot(pts[0]! - c.x, pts[1]! - c.y);
+    expect(Math.abs(r - waterRadius(1, 0))).toBeLessThan(6);
+  });
+});

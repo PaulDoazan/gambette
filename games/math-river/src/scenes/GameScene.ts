@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import type { Pair, Rng } from '@gambette/math-sdk';
 import {
   BUCKET_INSET,
@@ -106,16 +106,23 @@ export function createGameScene(deps: {
   const pools = ROUNDS.map((_, k) => createPool(k, START_LEVEL));
   const fish = createFish();
   // Tout ce qui est dans l'eau ondule ensemble : fond des trous, poisson, surface, canaux, mer.
-  const aquatic = new Container();
-  aquatic.label = 'aquatic';
-  aquatic.addChild(
-    sea.view,
+  // Les ondes de choc des seaux ne déforment que l'eau du trou : elles sont découpées à sa forme.
+  const holeWater = new Container();
+  holeWater.label = 'hole-water';
+  holeWater.addChild(
     ...pools.map((p) => p.floor),
     fish.shadow,
     fish.view,
     ...pools.map((p) => p.view),
   );
-  const waterFx = createWaterFx(aquatic, world);
+  const holeClip = new Container();
+  holeClip.label = 'hole-clip';
+  const holeMask = new Graphics();
+  holeClip.addChild(holeWater, holeMask);
+  const aquatic = new Container();
+  aquatic.label = 'aquatic';
+  aquatic.addChild(sea.view, holeClip);
+  const waterFx = createWaterFx(aquatic, holeWater);
   world.addChild(beach.view, aquatic, ...pools.map((p) => p.marks));
   const ui = new Container();
   ui.label = 'ui';
@@ -286,6 +293,7 @@ export function createGameScene(deps: {
   // L'eau atteint le canal : plus de tir, l'interface s'efface, le poisson s'en va.
   const endRound = (): void => {
     releaseAll();
+    waterFx.calm();
     pool().overflow();
     deps.onUiHidden?.(true);
     phaseMs = 0;
@@ -405,6 +413,15 @@ export function createGameScene(deps: {
       });
       sea.update(deltaMs);
       waterFx.update(deltaMs);
+      // Découpe à l'eau du trou seulement pendant une onde : le reste du temps, le poisson
+      // peut nager dans le canal.
+      if (waterFx.active()) {
+        holeMask.clear().poly(pool().waterShape()).fill(0xffffff);
+        holeClip.mask = holeMask;
+      } else if (holeClip.mask) {
+        holeClip.mask = null;
+        holeMask.clear();
+      }
       const shown = pool().shownLevel();
       fish.update(deltaMs, shown, waterRadius(shown, round));
       puddles = puddles.filter((p) => {
@@ -422,6 +439,7 @@ export function createGameScene(deps: {
       round = 0;
       setCamera(0);
       water.reset(ROUNDS[0]!);
+      waterFx.calm();
       for (const p of pools) p.reset(START_LEVEL);
       fish.reset();
       phase = 'playing';
