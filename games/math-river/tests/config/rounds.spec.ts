@@ -22,12 +22,16 @@ describe('manches', () => {
     expect(LAST_ROUND).toBe(2);
   });
 
-  it('chaque manche plus longue : ≈ 60 s, 90 s puis 120 s à l’allure de référence', () => {
-    [60, 90, 120].forEach((t, k) => expect(Math.abs(duration(k) - t)).toBeLessThan(2));
+  it('manche 1 réglée comme le jeu à un trou : 0,12 par seau, 0,018 infiltré par seconde', () => {
+    expect(ROUNDS[0]).toMatchObject({ perBucket: 0.12, drainPerSecond: 0.018 });
   });
 
-  it('une paire lente (un bon seau toutes les 8 s) progresse toujours', () => {
-    for (const r of ROUNDS) expect(r.perBucket / 8).toBeGreaterThan(r.drainPerSecond);
+  it('chaque manche un peu plus longue : ≈ 36 s, 47 s puis 58 s à l’allure de référence', () => {
+    [36, 47, 58].forEach((t, k) => expect(Math.abs(duration(k) - t)).toBeLessThan(2));
+  });
+
+  it('une paire trop lente (un bon seau toutes les 8 s) perd du terrain : l’infiltration presse', () => {
+    for (const r of ROUNDS) expect(r.perBucket / 8).toBeLessThan(r.drainPerSecond);
   });
 
   it('le plus grand trou ne touche ni les calculs ni les seaux, même sur le plateau le plus court', () => {

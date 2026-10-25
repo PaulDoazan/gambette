@@ -47,6 +47,8 @@ const run = (scene: Scene, ms: number, step = 50): void => {
 };
 const WATER_PER_BUCKET = ROUNDS[0]!.perBucket;
 const MAX_FLIGHT = flightMs(MAX_RANGE) + 50;
+/** Eau infiltrée pendant `ms` ms de jeu. */
+const seeped = (ms: number): number => (ROUNDS[0]!.drainPerSecond * ms) / 1000;
 /** Fin de manche complète : effacement, trajet du poisson, retour de l'interface. */
 const TRANSITION = PAN_MS + 2 * UI_FADE_MS + 100;
 /** Bons seaux au centre, en alternant les joueurs, jusqu'à ce que l'eau atteigne le canal. */
@@ -78,7 +80,9 @@ describe('GameScene', () => {
     expect(scene.buckets('A')[scene.correctIndex('A')]!.empty).toBe(true);
     expect(scene.level()).toBe(START_LEVEL); // encore en vol
     run(scene, MAX_FLIGHT);
-    expect(scene.level()).toBeGreaterThan(START_LEVEL + WATER_PER_BUCKET - 0.01);
+    expect(scene.level()).toBeGreaterThan(
+      START_LEVEL + WATER_PER_BUCKET - seeped(MAX_FLIGHT + 100),
+    );
     expect(scene.calc('A')).not.toBe(before);
     expect(scene.buckets('A').every((b) => !b.empty)).toBe(true);
   });
@@ -138,7 +142,9 @@ describe('GameScene', () => {
     scene.pointerUp(1);
     scene.pointerUp(2);
     run(scene, MAX_FLIGHT);
-    expect(scene.level()).toBeGreaterThan(START_LEVEL + 2 * WATER_PER_BUCKET - 0.02);
+    expect(scene.level()).toBeGreaterThan(
+      START_LEVEL + 2 * WATER_PER_BUCKET - seeped(MAX_FLIGHT + 100),
+    );
   });
 
   it('sans tir, le trou ne se vide jamais sous le plancher', () => {
@@ -163,14 +169,17 @@ describe('GameScene', () => {
     expect(scene.round()).toBe(1);
     expect(scene.cameraX()).toBe(720);
     // Repart du fond de départ (l'infiltration a repris avec l'interface).
-    expect(scene.level()).toBeCloseTo(START_LEVEL, 2);
+    expect(scene.level()).toBeLessThanOrEqual(START_LEVEL);
+    expect(scene.level()).toBeGreaterThan(START_LEVEL - seeped(2 * UI_FADE_MS + 100));
     expect(onUiHidden).toHaveBeenLastCalledWith(false);
     expect(scene.uiVisible()).toBe(true);
     expect(onWin).not.toHaveBeenCalled();
     // Jouable, avec l'apport de la manche 2.
     throwBucket(scene, 'A', scene.correctIndex('A'), holeCenter());
     run(scene, MAX_FLIGHT);
-    expect(scene.level()).toBeGreaterThan(START_LEVEL + ROUNDS[1]!.perBucket - 0.01);
+    expect(scene.level()).toBeGreaterThan(
+      START_LEVEL + ROUNDS[1]!.perBucket - seeped(2 * UI_FADE_MS + 200 + MAX_FLIGHT),
+    );
   });
 
   it('le plus grand trou de la manche 3 attrape l’eau tombée plus loin du centre', () => {
