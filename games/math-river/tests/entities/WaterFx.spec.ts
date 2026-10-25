@@ -11,7 +11,7 @@ describe('WaterFx', () => {
     expect(world.filters ?? []).toHaveLength(0);
   });
 
-  it('une onde de choc par impact, sur tout le décor, qui s’éteint après ≈ 4,4 s', () => {
+  it('une onde de choc par impact, sur l’eau du trou, qui s’éteint après ≈ 4,4 s', () => {
     const water = new Container();
     const world = new Container();
     const fx = createWaterFx(water, world);
@@ -29,5 +29,16 @@ describe('WaterFx', () => {
     const fx = createWaterFx(new Container(), world);
     for (let i = 0; i < 15; i++) fx.splash({ x: 360, y: 640 });
     expect(world.filters).toHaveLength(10);
+  });
+
+  it('active tant qu’une onde vit ; calm les arrête toutes (fin de manche)', () => {
+    const hole = new Container();
+    const fx = createWaterFx(new Container(), hole);
+    expect(fx.active()).toBe(false);
+    fx.splash({ x: 360, y: 640 });
+    expect(fx.active()).toBe(true);
+    fx.calm();
+    expect(fx.active()).toBe(false);
+    expect(hole.filters ?? []).toHaveLength(0);
   });
 });

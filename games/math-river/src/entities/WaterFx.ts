@@ -77,8 +77,12 @@ const SHOCK_LIFE = 4;
 export interface WaterFx {
   /** Eau qui ondule : déformation de tout ce qui est dans `target`. */
   update(dtMs: number): void;
-  /** Onde de choc là où l'eau d'un seau tombe (coordonnées de `target`), sur tout le décor. */
+  /** Onde de choc là où l'eau d'un seau tombe (coordonnées du monde), dans l'eau du trou. */
   splash(at: Vec): void;
+  /** Une onde de choc est en cours. */
+  active(): boolean;
+  /** Arrête toutes les ondes (fin de manche : le poisson quitte le trou). */
+  calm(): void;
 }
 
 /**
@@ -93,7 +97,7 @@ export function createWaterFx(target: Container, shockTarget: Container): WaterF
   const displacement = new DisplacementFilter({ sprite: map, scale: 14 });
   let shocks: ShockwaveFilter[] = [];
   target.filters = [displacement];
-  // Ondes de choc sur tout le décor, comme pixijs-elementals les met sur toute la scène.
+  // Ondes de choc sur l'eau du trou seulement (`shockTarget`, que la scène découpe à l'eau).
   const apply = (): void => {
     shockTarget.filters = shocks.length ? (shocks as Filter[]) : null;
   };
@@ -115,7 +119,7 @@ export function createWaterFx(target: Container, shockTarget: Container): WaterF
     splash: (at) => {
       if (shocks.length >= 10) return; // comme pixijs-elementals
       // Le filtre travaille en pixels de l'écran.
-      const g = target.toGlobal(at);
+      const g = shockTarget.toGlobal(at);
       shocks.push(
         new ShockwaveFilter({
           center: { x: g.x, y: g.y },
@@ -126,6 +130,12 @@ export function createWaterFx(target: Container, shockTarget: Container): WaterF
           time: 0,
         }),
       );
+      apply();
+    },
+    active: () => shocks.length > 0,
+    calm: () => {
+      shocks.forEach((s) => s.destroy());
+      shocks = [];
       apply();
     },
   };

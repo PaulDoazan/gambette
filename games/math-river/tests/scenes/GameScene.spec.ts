@@ -62,6 +62,22 @@ const fillHole = (scene: Scene): void => {
 };
 
 describe('GameScene', () => {
+  it('l’onde d’un seau reste dans l’eau du trou, et s’arrête en fin de manche', () => {
+    const { scene } = make();
+    const world = scene.view.getChildByLabel('world')!;
+    const clip = scene.view.getChildByLabel('hole-clip', true)!;
+    const hole = scene.view.getChildByLabel('hole-water', true)!;
+    throwBucket(scene, 'A', scene.correctIndex('A'), holeCenter());
+    run(scene, MAX_FLIGHT);
+    expect(world.filters ?? []).toHaveLength(0);
+    expect(hole.filters).toHaveLength(1);
+    expect(clip.mask).not.toBeNull();
+    fillHole(scene);
+    run(scene, 100);
+    expect(hole.filters ?? []).toHaveLength(0);
+    expect(clip.mask ?? null).toBeNull();
+  });
+
   it('calculs séparés : chaque joueur tire dans sa propre sélection', () => {
     const B: Pair[] = [{ a: 2, b: 5, op: 'add' }];
     const scene = createGameScene({ pairs: { A: PAIRS, B }, rng: mulberry32(3), onWin: vi.fn() });

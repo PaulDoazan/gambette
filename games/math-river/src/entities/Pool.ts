@@ -30,6 +30,8 @@ export interface Pool {
   readonly marks: Container;
   /** Niveau affiché (lissé), qui suit le niveau réel. */
   shownLevel(): number;
+  /** Contour de la surface de l'eau du trou, au niveau affiché (coordonnées du monde). */
+  waterShape(): number[];
   ripple(at: Vec): void;
   /** L'eau entre dans le canal (fin de manche). */
   overflow(): void;
@@ -131,6 +133,8 @@ export function createPool(k: number, startLevel: number): Pool {
       .fill({ color: COLORS.water, alpha: 0.5 })
       .stroke({ width: 2.5, color: COLORS.waterEdge });
     surface.clear();
+    // Voile d'eau au-dessus du poisson : il nage dedans, pas dessus.
+    surface.poly(shape).fill({ color: COLORS.water, alpha: 0.3 });
     surface
       .circle(cx - r * 0.2, cy - r * 0.25, r * 0.45)
       .fill({ color: COLORS.waterLight, alpha: 0.12 });
@@ -197,6 +201,7 @@ export function createPool(k: number, startLevel: number): Pool {
     floor,
     marks: marksView,
     shownLevel: () => shown,
+    waterShape: () => wobblyCircle(cx, cy, waterRadius(shown, k), 3),
     ripple: (at) => {
       ripples.push({ at, age: 0 });
     },
