@@ -55,17 +55,16 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
     cleanups.push(closeVictory);
 
     // Le centre de l'écran est le trou et la droite le canal : tous les boutons sont au bord
-    // gauche, au milieu, sur un bandeau navy. Quitter (SDK) au milieu, plein écran et engrenage
-    // en dessous.
+    // gauche, au milieu, dans un bandeau navy étroit et haut qui gêne peu la zone de jeu. En
+    // colonne : la croix Quitter (SDK), puis plein écran et engrenage.
     const band = document.createElement('div');
     band.style.cssText =
-      'position:absolute;left:0;top:calc(50% - 26px);width:112px;height:104px;z-index:5;' +
+      'position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:6;' +
+      'display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px 12px;' +
       'background:#00274b;border-radius:0 20px 20px 0;';
     const leftButtons = document.createElement('div');
-    leftButtons.style.cssText =
-      'position:absolute;left:12px;top:calc(50% + 24px);z-index:6;' +
-      'display:flex;align-items:center;gap:8px;';
-    el.append(band, leftButtons);
+    leftButtons.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;';
+    el.append(band);
     cleanups.push(() => {
       band.remove();
       leftButtons.remove();
@@ -158,7 +157,7 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
     gear.setAttribute('aria-label', 'Choisir les réglages');
     gear.title = 'Choisir les réglages';
     gear.style.cssText =
-      'display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;' +
+      'display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;' +
       'border:none;border-radius:999px;cursor:pointer;background-color:transparent;color:#fff;';
     gear.addEventListener('click', openSettings);
     cleanups.push(() => {
@@ -193,11 +192,14 @@ export async function mountMathRiver(el: HTMLElement, ctx: GameContext): Promise
     cleanups.push(() => app.canvas.removeEventListener('pointercancel', cancel));
 
     cleanups.push(installOrientationLock(el, 'portrait'));
-    const exit = createExitButton(el, () => ctx.onExit(), {
-      placement: 'side',
+    const exit = createExitButton(band, () => ctx.onExit(), {
+      placement: 'inline',
+      iconOnly: true,
       fullscreenParent: leftButtons,
     });
-    leftButtons.appendChild(gear); // après le plein écran (ajouté par le SDK)
+    // Sous la croix (ajoutée au bandeau par le SDK) : plein écran, puis engrenage.
+    band.appendChild(leftButtons);
+    leftButtons.appendChild(gear);
     // La confirmation « Quitter la partie ? » est plus haute que le bouton : elle recouvrirait la
     // rangée du dessous, masquée le temps de la confirmation.
     const onExitUi = (e: Event): void => {

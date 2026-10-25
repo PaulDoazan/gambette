@@ -20,6 +20,18 @@ const ICON_EXIT =
   'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
   '<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3m13-5h-3a2 2 0 0 0-2 2v3"/></svg>';
 
+/** Grande croix du bouton « Quitter » en icône seule. */
+const ICON_CLOSE =
+  '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" ' +
+  'stroke-width="2.5" stroke-linecap="round" aria-hidden="true">' +
+  '<path d="M6 6l12 12M18 6L6 18"/></svg>';
+
+/** Bouton rond du plein écran ; « Quitter » en icône seule a exactement la même taille. */
+const ROUND_BUTTON_CSS =
+  'display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;' +
+  'border:1px solid rgba(255,255,255,0.4);border-radius:999px;cursor:pointer;' +
+  'background:rgba(255,255,255,0.12);color:#fff;';
+
 /** Mobile = pointeur grossier (tactile) ; fallback sur la présence du tactile. */
 function isMobile(): boolean {
   return window.matchMedia?.('(pointer: coarse)')?.matches ?? 'ontouchstart' in window;
@@ -42,31 +54,48 @@ function fullscreenAvailable(el: FsElement): boolean {
  * `opts.fullscreen: false` désactive ce bouton (jeu qui fournit le sien).
  * `opts.placement: 'side'` place le bouton sur le bord gauche, centré
  * verticalement (jeux dont le haut d'écran est une zone de jeu).
+ * `opts.placement: 'inline'` ne le positionne pas : le jeu le range dans sa
+ * propre colonne de boutons (`parent`) ; la confirmation s'ouvre alors par-dessus,
+ * sans déplacer les autres boutons.
  * `opts.fullscreenParent` place le bouton plein écran dans ce conteneur au lieu
  * de le coller à « Quitter » (il reste masqué/affiché avec lui par setHidden).
+ * `opts.iconOnly` réduit « Quitter » à une grande croix, dans un bouton rond de la
+ * taille exacte du bouton plein écran.
  */
 export function createExitButton(
   parent: HTMLElement,
   onExit: () => void,
   opts: {
     fullscreen?: boolean | 'always';
-    placement?: 'top' | 'side';
+    placement?: 'top' | 'side' | 'inline';
     fullscreenParent?: HTMLElement;
+    iconOnly?: boolean;
   } = {},
 ): ExitButton {
   const wrap = document.createElement('div');
-  const position =
-    (opts.placement ?? 'top') === 'side'
+  const placement = opts.placement ?? 'top';
+  const inline = placement === 'inline';
+  const position = inline
+    ? 'position:relative;'
+    : placement === 'side'
       ? 'position:absolute;left:12px;top:50%;transform:translateY(-50%);'
       : 'position:absolute;top:12px;left:50%;transform:translateX(-50%);';
   wrap.style.cssText = position + 'z-index:6;display:flex;align-items:center;gap:8px;';
 
   const exit = document.createElement('button');
   exit.dataset.test = 'game-exit';
-  exit.textContent = '✕ Quitter';
-  exit.style.cssText =
-    'padding:6px 16px;border:1px solid rgba(255,255,255,0.4);border-radius:999px;' +
-    'cursor:pointer;font:600 13px system-ui,sans-serif;background:rgba(255,255,255,0.12);color:#fff;';
+  exit.type = 'button';
+  if (opts.iconOnly) {
+    exit.innerHTML = ICON_CLOSE;
+    exit.setAttribute('aria-label', 'Quitter');
+    exit.title = 'Quitter';
+    exit.style.cssText = ROUND_BUTTON_CSS;
+  } else {
+    exit.textContent = '✕ Quitter';
+    exit.style.cssText =
+      'padding:6px 16px;border:1px solid rgba(255,255,255,0.4);border-radius:999px;' +
+      'cursor:pointer;font:600 13px system-ui,sans-serif;background:rgba(255,255,255,0.12);color:#fff;';
+  }
 
   // Phrase au-dessus, les deux sous-boutons en dessous.
   const confirm = document.createElement('div');
@@ -75,6 +104,12 @@ export function createExitButton(
     'display:none;flex-direction:column;align-items:center;gap:8px;padding:10px 16px;' +
     'border-radius:16px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.4);' +
     'font:600 13px system-ui,sans-serif;color:#fff;';
+  // En colonne, la confirmation s'ouvre par-dessus, à droite du bouton, sur fond opaque.
+  if (inline) {
+    confirm.style.cssText +=
+      'position:absolute;left:0;top:50%;transform:translateY(-50%);white-space:nowrap;' +
+      'background:#00274b;z-index:1;';
+  }
   const question = document.createElement('span');
   question.textContent = 'Quitter la partie ?';
   const actions = document.createElement('div');
@@ -95,7 +130,9 @@ export function createExitButton(
   wrap.append(exit, confirm);
 
   const setConfirm = (visible: boolean): void => {
-    exit.style.display = visible ? 'none' : '';
+    // En colonne, le bouton garde sa place : les boutons du dessous ne bougent pas.
+    if (inline) exit.style.visibility = visible ? 'hidden' : '';
+    else exit.style.display = visible ? 'none' : '';
     confirm.style.display = visible ? 'flex' : 'none';
   };
   exit.addEventListener('click', () => setConfirm(true));
@@ -117,10 +154,7 @@ export function createExitButton(
     const fsBtn = document.createElement('button');
     fsBtn.dataset.test = 'game-fullscreen';
     fsBtn.type = 'button';
-    fsBtn.style.cssText =
-      'display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;' +
-      'border:1px solid rgba(255,255,255,0.4);border-radius:999px;cursor:pointer;' +
-      'background:rgba(255,255,255,0.12);color:#fff;';
+    fsBtn.style.cssText = ROUND_BUTTON_CSS;
 
     const isFullscreen = (): boolean =>
       (doc.fullscreenElement ?? doc.webkitFullscreenElement) != null;

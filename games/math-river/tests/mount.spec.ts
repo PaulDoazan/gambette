@@ -125,12 +125,23 @@ describe('mathRiver.mount / unmount', () => {
     expect(mathRiver.meta.instructions).not.toBe('');
   });
 
-  it('monte canvas, quitter au bord gauche et engrenage ; unmount vide el', async () => {
+  it('monte canvas, et au bord gauche un panneau étroit : croix, plein écran et engrenage en colonne ; unmount vide el', async () => {
     const el = document.createElement('div');
     const instance = await mathRiver.mount(el, ctx());
     expect(el.querySelector('canvas')).not.toBeNull();
-    expect(exitWrap(el).style.left).toBe('12px');
-    expect(gearOf(el).parentElement!.style.left).toBe('12px');
+    const exit = el.querySelector<HTMLElement>('[data-test="game-exit"]')!;
+    expect(exit.textContent).toBe('');
+    expect(exit.getAttribute('aria-label')).toBe('Quitter');
+    const panel = exitWrap(el).parentElement!;
+    expect(panel.style.left).toBe('0px');
+    expect(panel.style.flexDirection).toBe('column');
+    // Croix en haut, puis la rangée plein écran + engrenage, elle aussi en colonne.
+    const below = gearOf(el).parentElement!;
+    expect(below.parentElement).toBe(panel);
+    expect(below.style.flexDirection).toBe('column');
+    expect([...panel.children].indexOf(exitWrap(el))).toBeLessThan(
+      [...panel.children].indexOf(below),
+    );
     instance.unmount();
     expect(el.children).toHaveLength(0);
     const app = fakeApps[0]!;
