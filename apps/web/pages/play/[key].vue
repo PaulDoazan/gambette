@@ -3,11 +3,13 @@ import { computed, onBeforeUnmount, onMounted } from 'vue';
 import type { GameContext } from '@gambette/game-sdk';
 import { registry } from '~/games';
 import { gameCosmetic } from '~/lib/gameCosmetics';
+import { gameTutorial } from '~/lib/gameTutorials';
 
 const route = useRoute();
 const key = route.params.key as string;
 const gameModule = registry.get(key);
 const cosmetic = computed(() => gameCosmetic(key));
+const tutorial = gameTutorial(key);
 const session = useGameSession();
 
 const ctx: GameContext = {
@@ -38,8 +40,9 @@ onBeforeUnmount(() => session.backToBriefing());
     <BriefingPanel
       v-else
       :meta="gameModule.meta"
-      :color-token="cosmetic.color"
+      :accent="cosmetic.band"
       :icon="cosmetic.icon"
+      :tutorial="tutorial"
       @play="session.startPlaying()"
     />
   </template>
