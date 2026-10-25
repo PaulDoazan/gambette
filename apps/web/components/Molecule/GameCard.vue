@@ -2,70 +2,62 @@
 import { computed } from 'vue';
 import type { GameMeta } from '@gambette/game-sdk';
 import { gameCosmetic } from '~/lib/gameCosmetics';
+import { playersBadge } from '~/lib/players';
 
 const props = defineProps<{ meta: GameMeta; index?: number }>();
 const emit = defineEmits<{ play: [key: string] }>();
 
 const cosmetic = computed(() => gameCosmetic(props.meta.key, props.index ?? 0));
+const players = computed(() => playersBadge(props.meta.players));
 </script>
 
 <template>
-  <VCard
+  <!-- Toute la carte lance le jeu : grande vignette, titre en bandeau, pastille des joueurs. -->
+  <button
+    type="button"
     class="game-card"
-    :style="{ '--stagger': `${(props.index ?? 0) * 90}ms` }"
-    rounded="xl"
-    elevation="3"
-    height="100%"
+    :style="{ '--stagger': `${(props.index ?? 0) * 90}ms`, '--band': cosmetic.band }"
+    :aria-label="`${props.meta.name}, ${players.label}`"
+    @click="emit('play', props.meta.key)"
   >
-    <!-- Bandeau de marque : couleur du jeu + emblème -->
-    <div class="game-card__banner" :style="{ background: `rgb(var(--v-theme-${cosmetic.color}))` }">
-      <VIcon :icon="cosmetic.icon" class="game-card__emblem" size="60" />
-    </div>
-
-    <VCardItem class="pb-1">
-      <VCardTitle class="game-card__title">{{ props.meta.name }}</VCardTitle>
-    </VCardItem>
-
-    <VCardText class="game-card__body">
-      <p class="game-card__desc">{{ props.meta.description }}</p>
-
-      <div class="game-card__badges">
-        <VChip
-          v-for="trait in cosmetic.traits"
-          :key="trait"
-          class="game-card__trait"
-          size="small"
-          color="warning"
-          variant="flat"
-          prepend-icon="mdi-star-four-points"
-        >
-          {{ trait }}
-        </VChip>
-      </div>
-    </VCardText>
-
-    <VCardActions class="game-card__actions">
-      <VBtn
-        class="game-card__cta"
-        :color="cosmetic.color"
-        variant="flat"
-        rounded="pill"
-        size="large"
-        block
-        append-icon="mdi-arrow-right"
-        @click="emit('play', props.meta.key)"
+    <span class="game-card__frame">
+      <img v-if="cosmetic.thumbnail" class="game-card__thumb" :src="cosmetic.thumbnail" alt="" />
+      <span
+        v-else
+        class="game-card__thumb game-card__thumb--emblem"
+        :style="{ background: `rgb(var(--v-theme-${cosmetic.color}))` }"
       >
-        Jouer
-      </VBtn>
-    </VCardActions>
-  </VCard>
+        <VIcon :icon="cosmetic.icon" size="72" />
+      </span>
+
+      <span class="game-card__players" aria-hidden="true">
+        <VIcon icon="mdi-account" size="20" />
+        <!-- Le « + » de la police est trop petit à côté du « v » : icône à la place. -->
+        <VIcon
+          v-if="players.mark === '+'"
+          icon="mdi-plus-thick"
+          size="18"
+          class="game-card__plus"
+        />
+        <span v-else-if="players.mark" class="game-card__mark">{{ players.mark }}</span>
+        <VIcon v-if="players.people === 2" icon="mdi-account" size="20" />
+      </span>
+
+      <span class="game-card__title">{{ props.meta.name }}</span>
+    </span>
+  </button>
 </template>
 
 <style scoped>
 .game-card {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  display: block;
+  width: 100%;
+  padding: 7px;
+  border: none;
+  border-radius: 30px;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -14px rgba(0, 39, 75, 0.45);
   transition:
     transform 0.22s cubic-bezier(0.2, 0.7, 0.3, 1),
     box-shadow 0.22s ease;
@@ -73,57 +65,86 @@ const cosmetic = computed(() => gameCosmetic(props.meta.key, props.index ?? 0));
   animation: card-rise 0.5s both;
   animation-delay: var(--stagger, 0ms);
 }
+.game-card:focus-visible {
+  outline: 3px solid #ffcc5c;
+  outline-offset: 3px;
+}
 
 @media (hover: hover) {
   .game-card:hover {
-    transform: translateY(-8px);
+    transform: translateY(-6px);
     box-shadow: 0 18px 38px -16px rgba(0, 39, 75, 0.5);
   }
 }
 
-.game-card__banner {
+.game-card__frame {
   position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 24px;
+}
+.game-card__thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.game-card__thumb--emblem {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 116px;
   color: #fff;
 }
-.game-card__emblem {
-  position: relative;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+
+/* Joueurs : une personne (seul), ou deux séparées par « v » (duel) ou « + » (équipe). */
+.game-card__players {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #00274b;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
-.game-card__title {
+.game-card__mark {
   font-family: 'Raleway', sans-serif;
   font-weight: 800;
   font-size: 1.3rem;
-}
-.game-card__body {
-  flex: 1 1 auto;
-}
-.game-card__desc {
-  color: rgba(0, 39, 75, 0.82);
-  line-height: 1.5;
-}
-.game-card__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-/* Pastille caractéristique : fond jaune charte, texte Oxford Blue pour le contraste. */
-.game-card__trait {
-  color: #00274b;
-  font-weight: 600;
-}
-.game-card__actions {
-  padding: 12px 16px 18px;
-}
-.game-card__cta {
-  font-family: 'Raleway', sans-serif;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 0 3px 2px;
   text-transform: none;
+}
+
+.game-card__plus {
+  margin: 0 2px;
+}
+
+/* Titre en bandeau, posé en bas de la vignette. */
+.game-card__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24%;
+  padding: 8px 10px;
+  border-radius: 22px 22px 0 0;
+  background: var(--band);
+  color: #fff;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.95rem, 4vw, 1.35rem);
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 @keyframes card-rise {

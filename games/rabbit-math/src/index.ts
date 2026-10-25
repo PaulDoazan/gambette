@@ -6,6 +6,7 @@ export const rabbitMath: GameModule = {
     key: 'rabbit-math',
     name: 'Rabbit Math',
     description: 'Lance des carottes au lapin qui porte la bonne réponse.',
+    players: 'solo',
     instructions:
       'Tire sur l’élastique et vise le lapin qui affiche le résultat du calcul. ' +
       'Le bouton engrenage permet de choisir les calculs à travailler.',
