@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { registry } from '~/games';
+import jouerADeux from '~/assets/illustrations/jouer-a-deux.svg';
 
 const games = registry.list();
 
@@ -18,8 +19,16 @@ function play(key: string): void {
       </div>
       <div class="hero__content">
         <h1 class="hero__title">Gambette</h1>
-        <p class="hero__tagline">Des jeux pour s'entraîner au calcul en s'amusant.</p>
+        <p class="hero__tagline">
+          Des jeux pour s'entraîner au calcul, en solo, en équipe ou en s'affrontant, toujours en
+          s'amusant&nbsp;!
+        </p>
       </div>
+      <img
+        class="hero__art"
+        :src="jouerADeux"
+        alt="Un adulte et un enfant jouent face à face sur le même téléphone posé sur une table"
+      />
     </section>
 
     <section class="games">
@@ -44,6 +53,15 @@ function play(key: string): void {
   color: #fff;
   background: #00274b; /* Oxford Blue, couleur pleine */
   box-shadow: 0 24px 60px -28px rgba(0, 39, 75, 0.7);
+}
+/* Illustration sous le texte sur téléphone, à droite sur grand écran. */
+@media (min-width: 760px) {
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 360px);
+    align-items: center;
+    gap: 24px;
+  }
 }
 
 /* Habillage de marque : petites formes géométriques (jaune / violet / blanc),
@@ -71,6 +89,14 @@ function play(key: string): void {
 .hero__content {
   position: relative;
   z-index: 1;
+}
+.hero__art {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
 }
 .hero__title {
   font-family: 'Raleway', sans-serif;
