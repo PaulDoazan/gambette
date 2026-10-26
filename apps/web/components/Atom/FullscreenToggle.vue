@@ -6,7 +6,11 @@ import { shouldShowFullscreenToggle } from '~/composables/useFullscreen';
 // partie en cours (le jeu a son propre bouton). Cible la racine du document, donc
 // l'état plein écran reste cohérent d'un écran à l'autre.
 // `inline` : intégré dans le flux (header) au lieu d'être posé en fixe en haut à droite.
-withDefaults(defineProps<{ inline?: boolean }>(), { inline: false });
+// `color` : token ou couleur Vuetify (ex. `white` sur un fond sombre).
+withDefaults(defineProps<{ inline?: boolean; color?: string }>(), {
+  inline: false,
+  color: 'primary',
+});
 
 const { isFullscreen, isSupported, isMobile, toggle } = useFullscreen();
 const session = useGameSession();
@@ -23,7 +27,7 @@ const visible = computed(() =>
     :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
     size="small"
     variant="tonal"
-    color="primary"
+    :color="color"
     :aria-label="isFullscreen ? 'Quitter le plein écran' : 'Plein écran'"
     :title="isFullscreen ? 'Quitter le plein écran' : 'Plein écran'"
     @click="toggle"
