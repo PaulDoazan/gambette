@@ -1,4 +1,4 @@
-import type { Op, Pair } from '../domain/calcs';
+import { twoDigitAddRange, type AddRange, type Op, type Pair } from '../domain/calcs';
 import { CALCS_PICKER_CSS } from './style';
 import {
   OP_LABEL,
@@ -71,13 +71,20 @@ const buildTabsRow = (tabs: readonly HTMLButtonElement[]): HTMLDivElement => {
   return row;
 };
 
+const inRange = (p: Pair, r: AddRange | null): boolean =>
+  r !== null && p.op === 'add' && p.a >= r.min && p.a <= r.max && p.b >= r.min && p.b <= r.max;
+
 const buildBody = (initial: readonly Pair[], checkboxes: HTMLInputElement[]): HTMLDivElement => {
   const body = document.createElement('div');
   body.className = 'cp-body';
-  const has = initialKeys(initial);
+  const addRange = twoDigitAddRange(initial);
+  // Les calculs de la fourchette (dont 10 + 10) ne cochent pas les tables.
+  const has = initialKeys(initial.filter((p) => !inRange(p, addRange)));
   const tabs = TAB_OPS.map((op, i) => buildTab(op, i === 0));
   body.appendChild(buildTabsRow(tabs));
-  const handles: OpPanelHandles[] = TAB_OPS.map((op) => buildOpPanel(op, has, checkboxes));
+  const handles: OpPanelHandles[] = TAB_OPS.map((op) =>
+    buildOpPanel(op, has, checkboxes, addRange),
+  );
   handles.forEach((h, i) => {
     if (i !== 0) h.panel.style.display = 'none';
     body.appendChild(h.panel);

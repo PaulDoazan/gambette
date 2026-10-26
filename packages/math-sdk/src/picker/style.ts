@@ -163,6 +163,48 @@ export const CALCS_PICKER_CSS = `
   margin-right: 12px;
   accent-color: #ff7a2b;
 }
+.cp-range {
+  margin-top: 4px;
+  border: 2px solid #111;
+  border-radius: 8px;
+  background: #ffeec2;
+  padding: 4px 10px 10px;
+}
+.cp-range-head {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+}
+.cp-range-head input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin: 0 12px 0 0;
+  accent-color: #ff7a2b;
+}
+.cp-range-bounds {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 34px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.cp-range-bounds input {
+  width: 64px;
+  min-height: 36px;
+  border: 2px solid #111;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+  color: #111;
+}
 .cp-footer {
   display: flex;
   align-items: center;

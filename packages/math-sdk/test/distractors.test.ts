@@ -88,3 +88,14 @@ describe('generateDistractors petites réponses (soustractions ≤ 1)', () => {
     }
   });
 });
+
+describe('generateDistractors au-delà de 100', () => {
+  it('reste proche d’une grande réponse (addition à 2 chiffres)', () => {
+    const ds = generateDistractors(178, 'medium', 4, mulberry32(5));
+    expect(ds).toHaveLength(4);
+    for (const d of distancesFrom(178, ds)) {
+      expect(d).toBeGreaterThanOrEqual(3);
+      expect(d).toBeLessThanOrEqual(9);
+    }
+  });
+});

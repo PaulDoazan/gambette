@@ -37,6 +37,32 @@ export const allAddPairs = (): Pair[] => tablePairs(range(1, 10), 'add');
 export const allSubPairs = (): Pair[] => tablePairs(range(1, 10), 'sub');
 export const allPairs = (): Pair[] => allMulPairs();
 
+export interface AddRange {
+  readonly min: number;
+  readonly max: number;
+}
+
+/** Bornes des termes d'une addition à 2 chiffres. */
+export const TWO_DIGIT_MIN = 10;
+export const TWO_DIGIT_MAX = 99;
+
+/** Additions dont chaque terme est entre `min` et `max`, bornes comprises. */
+export const twoDigitAddPairs = (min: number, max: number): Pair[] =>
+  range(min, max).flatMap((a) => range(min, max).map((b) => ({ a, b, op: 'add' as Op })));
+
+/**
+ * Fourchette des additions à 2 chiffres d'une sélection, ou null. Un terme au-delà de 10 la
+ * distingue des tables d'addition (10 + 10 seul reste un calcul de la table de 10).
+ */
+export function twoDigitAddRange(pairs: readonly Pair[]): AddRange | null {
+  const twoDigit = pairs.filter(
+    (p) => p.op === 'add' && p.a >= TWO_DIGIT_MIN && p.b >= TWO_DIGIT_MIN,
+  );
+  if (!twoDigit.some((p) => p.a > TWO_DIGIT_MIN || p.b > TWO_DIGIT_MIN)) return null;
+  const terms = twoDigit.flatMap((p) => [p.a, p.b]);
+  return { min: Math.min(...terms), max: Math.max(...terms) };
+}
+
 export const computeAnswer = (p: Pair): number => {
   if (p.op === 'mul') return p.a * p.b;
   if (p.op === 'add') return p.a + p.b;

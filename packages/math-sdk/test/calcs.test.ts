@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { TABLE_LISTS, getTableList, type TableListId } from '../src/domain/calcs';
+import {
+  TABLE_LISTS,
+  getTableList,
+  twoDigitAddPairs,
+  twoDigitAddRange,
+  type TableListId,
+} from '../src/domain/calcs';
 
 describe('TABLE_LISTS shape', () => {
   it('has exactly 8 lists', () => {
@@ -88,5 +94,31 @@ describe('randomMulPairs', () => {
 
   it('est déterministe avec un rng fourni', () => {
     expect(randomMulPairs(5, mulberry32(42))).toEqual(randomMulPairs(5, mulberry32(42)));
+  });
+});
+
+describe('twoDigitAddPairs', () => {
+  it('chaque terme dans la fourchette, bornes comprises', () => {
+    const pairs = twoDigitAddPairs(20, 30);
+    expect(pairs).toHaveLength(11 * 11);
+    expect(pairs).toContainEqual({ a: 20, b: 30, op: 'add' });
+    for (const p of pairs) {
+      expect(p.op).toBe('add');
+      expect(p.a).toBeGreaterThanOrEqual(20);
+      expect(p.b).toBeLessThanOrEqual(30);
+    }
+  });
+});
+
+describe('twoDigitAddRange', () => {
+  it('retrouve la fourchette d’une sélection', () => {
+    const pairs = [{ a: 3, b: 4, op: 'add' as const }, ...twoDigitAddPairs(15, 42)];
+    expect(twoDigitAddRange(pairs)).toEqual({ min: 15, max: 42 });
+  });
+
+  it('null sans addition à 2 chiffres, y compris pour la table de 10', () => {
+    expect(twoDigitAddRange(getTableList('tables_all').pairs)).toBeNull();
+    expect(twoDigitAddRange([{ a: 10, b: 10, op: 'add' }])).toBeNull();
+    expect(twoDigitAddRange([{ a: 12, b: 15, op: 'mul' }])).toBeNull();
   });
 });
