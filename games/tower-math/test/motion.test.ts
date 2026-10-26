@@ -30,4 +30,21 @@ describe('stepBounce', () => {
     const s2 = stepBounce(s1.pos, s1.forward, SPEED, BOUND, FRAME);
     expect(big.pos).toBeCloseTo(s2.pos, 10);
   });
+
+  it('ne reste jamais bloqué au bord quand une image lente fait dépasser de plus d’un pas', () => {
+    // Une image lente (pas maximal 1/20 s) emmène le pavé loin au-delà du bord ;
+    // les images suivantes, normales, font des pas plus courts que ce dépassement.
+    let s = stepBounce(7.4, 1, SPEED, BOUND, 1 / 20);
+    expect(s.pos).toBeGreaterThan(BOUND + SPEED * FRAME);
+    for (let i = 0; i < 10; i++) s = stepBounce(s.pos, s.forward, SPEED, BOUND, FRAME);
+    expect(s.forward).toBe(-1);
+    expect(s.pos).toBeLessThan(BOUND);
+  });
+
+  it('même chose au bord inférieur', () => {
+    let s = stepBounce(-7.4, -1, SPEED, BOUND, 1 / 20);
+    for (let i = 0; i < 10; i++) s = stepBounce(s.pos, s.forward, SPEED, BOUND, FRAME);
+    expect(s.forward).toBe(1);
+    expect(s.pos).toBeGreaterThan(-BOUND);
+  });
 });
