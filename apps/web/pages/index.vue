@@ -12,7 +12,10 @@ function play(key: string): void {
 <template>
   <VContainer class="home py-8">
     <section class="hero">
-      <AtomFullscreenToggle inline color="white" class="hero__fullscreen" />
+      <div class="hero__tools">
+        <AtomThemeToggle color="white" />
+        <AtomFullscreenToggle inline color="white" />
+      </div>
       <div class="hero__decor" aria-hidden="true">
         <AtomShapeArcs color="#FFCC5C" class="hero__shape hero__shape--arcs" />
       </div>
@@ -53,6 +56,10 @@ function play(key: string): void {
   background: #00274b; /* Oxford Blue, couleur pleine */
   box-shadow: 0 24px 60px -28px rgba(0, 39, 75, 0.7);
 }
+/* Mode sombre : le bloc bleu marine se détache du fond par un liseré. */
+.v-theme--dark .hero {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
 /* Illustration sous le texte sur téléphone, à droite sur grand écran. */
 @media (min-width: 760px) {
   .hero {
@@ -85,11 +92,13 @@ function play(key: string): void {
   transform: rotate(7deg); /* penche de 10° dans le sens horaire */
 }
 
-.hero__fullscreen {
+.hero__tools {
   position: absolute;
   top: 16px;
   right: 16px;
   z-index: 2;
+  display: flex;
+  gap: 8px;
 }
 .hero__content {
   position: relative;

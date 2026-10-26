@@ -20,7 +20,9 @@ export default defineNuxtConfig({
     moduleOptions: {},
     vuetifyOptions: {
       theme: {
-        defaultTheme: 'light',
+        // Suit le réglage clair / sombre du système ; le bouton soleil/lune peut
+        // forcer l'un ou l'autre (plugins/colorMode.client.ts).
+        defaultTheme: 'system',
         themes: {
           light: {
             colors: {
@@ -28,6 +30,20 @@ export default defineNuxtConfig({
               secondary: '#FF7D6D',
               tertiary: '#9566FF',
               warning: '#FFCC5C',
+              // Couleur des textes courants (rgba(var(--v-theme-ink), opacité)).
+              ink: '#00274B',
+            },
+          },
+          dark: {
+            dark: true,
+            colors: {
+              background: '#07111F',
+              surface: '#0F1E33',
+              primary: '#A9C8F5',
+              secondary: '#FF7D6D',
+              tertiary: '#9566FF',
+              warning: '#FFCC5C',
+              ink: '#E6EEF8',
             },
           },
         },

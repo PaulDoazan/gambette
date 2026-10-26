@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Header commun aux écrans hors-jeu (accueil, classement, fin de partie) :
-// « Retour » à gauche, plein écran à droite, puis un séparateur avant le contenu.
+// « Retour » à gauche, clair/sombre et plein écran à droite, puis un séparateur avant le contenu.
 // Deux modes de retour : navigation directe via `backTo`, ou émission de `back`
 // laissée au parent (ex. GameOverPanel a une confirmation avant de quitter).
 withDefaults(
@@ -37,7 +37,10 @@ const emit = defineEmits<{ back: [] }>();
 
       <VSpacer />
 
-      <AtomFullscreenToggle inline />
+      <div class="screen-header__tools">
+        <AtomThemeToggle />
+        <AtomFullscreenToggle inline />
+      </div>
     </div>
     <VDivider class="screen-header__divider" />
   </div>
@@ -47,6 +50,10 @@ const emit = defineEmits<{ back: [] }>();
 .screen-header__bar {
   display: flex;
   align-items: center;
+}
+.screen-header__tools {
+  display: flex;
+  gap: 8px;
 }
 .screen-header__divider {
   margin: 12px 0 24px;

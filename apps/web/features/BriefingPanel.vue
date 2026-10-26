@@ -60,6 +60,13 @@ const emit = defineEmits<{ play: [] }>();
 </template>
 
 <style scoped>
+/* Mode sombre : couleur du jeu éclaircie pour les titres, lisible sur le fond. */
+.briefing {
+  --accent-text: var(--accent);
+}
+.v-theme--dark .briefing {
+  --accent-text: color-mix(in srgb, var(--accent) 55%, white);
+}
 .briefing__header {
   display: flex;
   align-items: center;
@@ -83,11 +90,11 @@ const emit = defineEmits<{ play: [] }>();
   font-weight: 800;
   font-size: clamp(1.5rem, 3vw, 2rem);
   line-height: 1.1;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .briefing__instructions {
   margin-top: 4px;
-  color: rgba(0, 39, 75, 0.78);
+  color: rgba(var(--v-theme-ink), 0.78);
   line-height: 1.5;
 }
 /* Jouer désormais seul à cet emplacement : on le met en avant (font + relief). */
@@ -107,7 +114,7 @@ const emit = defineEmits<{ play: [] }>();
   font-family: 'Raleway', sans-serif;
   font-weight: 800;
   font-size: 1.4rem;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .tuto__steps {
   display: grid;
@@ -137,7 +144,7 @@ const emit = defineEmits<{ play: [] }>();
   gap: 10px;
   align-items: flex-start;
   line-height: 1.45;
-  color: rgba(0, 39, 75, 0.85);
+  color: rgba(var(--v-theme-ink), 0.85);
 }
 .tuto__num {
   flex: 0 0 auto;
