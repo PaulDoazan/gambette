@@ -69,7 +69,7 @@ const BY_KEY: Record<string, readonly TutorialStep[]> = {
     },
     {
       image: mathRiver2,
-      text: 'Tire le bon seau vers toi, vise le trou et relâche. Un mauvais seau se renverse !',
+      text: 'Tire le bon seau vers toi, vise le trou et relâche. Un mauvais seau lance du sable, qui fait baisser l’eau !',
     },
     {
       image: mathRiver3,

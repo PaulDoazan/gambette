@@ -22,7 +22,8 @@ import { createCalcBlock, type CalcBlock } from '../entities/CalcBlock';
 import { createFish } from '../entities/Fish';
 import { createWaterFx } from '../entities/WaterFx';
 import { createPool, waterRadius } from '../entities/Pool';
-import { createPuddle, createWaterShot } from '../entities/Splash';
+import { createSandSplash } from '../entities/SandSplash';
+import { createPuddle, createShot } from '../entities/Splash';
 import { createSea } from '../entities/Sea';
 
 export interface BucketState {
@@ -59,11 +60,19 @@ export interface GameScene {
 }
 
 interface Flight {
+  /** Eau du bon seau, ou sable d'un mauvais seau. */
+  load: 'water' | 'sand';
   from: Vec;
   to: Vec;
   elapsed: number;
   duration: number;
-  shot: ReturnType<typeof createWaterShot>;
+  shot: ReturnType<typeof createShot>;
+}
+
+/** Trace au sol, sous les seaux : flaque d'eau à côté du trou, ou sable étalé à l'impact. */
+interface Decal {
+  readonly view: Container;
+  update(dtMs: number): boolean;
 }
 
 interface Side {
@@ -73,7 +82,7 @@ interface Side {
   block: CalcBlock;
   guide: ReturnType<typeof createAimGuide>;
   held: { index: number; aim: Aim | null } | null;
-  /** Eau du bon seau en vol : le joueur attend son nouveau calcul. */
+  /** Eau ou sable en vol : le joueur attend qu'il retombe avant de saisir un autre seau. */
   flight: Flight | null;
 }
 
@@ -126,7 +135,7 @@ export function createGameScene(deps: {
   world.addChild(beach.view, aquatic, ...pools.map((p) => p.marks));
   const ui = new Container();
   ui.label = 'ui';
-  const ground = new Container(); // flaques, sous les seaux
+  const ground = new Container(); // flaques et sable étalé, sous les seaux
   ground.label = 'ground';
   const air = new Container(); // eau en vol, au-dessus de tout
   air.label = 'air';
@@ -156,11 +165,10 @@ export function createGameScene(deps: {
   }
   ui.addChild(air, effects);
 
-  let puddles: ReturnType<typeof createPuddle>[] = [];
-  const addPuddle = (at: Vec, missBy?: Player): void => {
-    const p = createPuddle(at, missBy);
-    ground.addChild(p.view);
-    puddles.push(p);
+  let decals: Decal[] = [];
+  const addDecal = (d: Decal): void => {
+    ground.addChild(d.view);
+    decals.push(d);
   };
 
   const router = createTouchRouter();
@@ -218,16 +226,13 @@ export function createGameScene(deps: {
     const bucket = s.buckets[held.index]!;
     drop(pl);
     if (!held.aim) return;
-    if (held.index !== s.correct) {
-      // Mauvais seau : il se vide sur place, sans remplir le trou.
-      bucket.spill();
-      addPuddle(bucket.home);
-      return;
-    }
+    // Un mauvais seau part quand même, chargé de sable au lieu d'eau.
+    const load = held.index === s.correct ? 'water' : 'sand';
     bucket.setEmpty(true);
-    const shot = createWaterShot();
+    const shot = createShot(load);
     air.addChild(shot.view);
     s.flight = {
+      load,
       from: bucket.home,
       to: held.aim.target,
       elapsed: 0,
@@ -244,12 +249,22 @@ export function createGameScene(deps: {
     f.shot.view.destroy({ children: true });
     // En fin de manche, l'eau encore en vol ne compte plus.
     if (phase !== 'playing') return;
+    if (f.load === 'sand') {
+      // Le sable fait baisser l'eau ; le calcul reste, avec les seaux qui n'ont pas encore servi.
+      const wet = inHole(f.to, holeRadius());
+      if (wet) {
+        water.sand();
+        pool().ripple({ x: f.to.x + camera, y: f.to.y });
+      }
+      addDecal(createSandSplash(f.to, wet));
+      return;
+    }
     if (inHole(f.to, holeRadius())) {
       water.pour();
       pool().ripple({ x: f.to.x + camera, y: f.to.y });
       waterFx.splash({ x: f.to.x + camera, y: f.to.y });
     } else {
-      addPuddle(f.to, pl);
+      addDecal(createPuddle(f.to, pl));
     }
     renew(pl, true);
   };
@@ -285,9 +300,9 @@ export function createGameScene(deps: {
       sides[pl].flight = null;
     }
   };
-  const clearPuddles = (): void => {
-    for (const p of puddles) p.view.destroy({ children: true });
-    puddles = [];
+  const clearDecals = (): void => {
+    for (const d of decals) d.view.destroy({ children: true });
+    decals = [];
   };
 
   // L'eau atteint le canal : plus de tir, l'interface s'efface, le poisson s'en va.
@@ -331,7 +346,7 @@ export function createGameScene(deps: {
       return;
     }
     ui.alpha = Math.max(0, 1 - phaseMs / UI_FADE_MS);
-    if (ui.alpha === 0 && puddles.length > 0) clearPuddles();
+    if (ui.alpha === 0 && decals.length > 0) clearDecals();
     if (phase === 'leaving') {
       // Le canal se vide derrière le poisson ; la caméra le suit sans jamais reculer.
       if (phaseMs >= 0.45 * PAN_MS) pool().drain();
@@ -424,9 +439,9 @@ export function createGameScene(deps: {
       }
       const shown = pool().shownLevel();
       fish.update(deltaMs, shown, waterRadius(shown, round));
-      puddles = puddles.filter((p) => {
-        if (p.update(deltaMs)) return true;
-        p.view.destroy({ children: true });
+      decals = decals.filter((d) => {
+        if (d.update(deltaMs)) return true;
+        d.view.destroy({ children: true });
         return false;
       });
       if (phase === 'playing' && water.full()) endRound();
@@ -435,7 +450,7 @@ export function createGameScene(deps: {
     reset: () => {
       releaseAll();
       clearFlights();
-      clearPuddles();
+      clearDecals();
       round = 0;
       setCamera(0);
       water.reset(ROUNDS[0]!);

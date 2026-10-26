@@ -8,6 +8,8 @@ export interface Water {
   level(): number;
   /** Un bon seau est tombé dans le trou. */
   pour(): void;
+  /** Le sable d'un mauvais seau est tombé dans le trou : l'eau baisse d'autant qu'un seau l'aurait montée. */
+  sand(): void;
   /** Infiltration pendant `dtMs` ; le niveau ne descend jamais sous MIN_LEVEL. */
   update(dtMs: number): void;
   /** L'eau atteint le canal : le poisson peut s'échapper. */
@@ -23,6 +25,9 @@ export function createWater(initial: WaterSpec, start = START_LEVEL): Water {
     level: () => level,
     pour: () => {
       level = Math.min(1, level + spec.perBucket);
+    },
+    sand: () => {
+      level = Math.max(MIN_LEVEL, level - spec.perBucket);
     },
     update: (dtMs) => {
       // Une fois plein, l'eau s'écoule par le canal : plus d'infiltration qui compte.

@@ -10,7 +10,8 @@ export const mathRiver: GameModule = {
     instructions:
       'Posez le téléphone entre vous, chacun face à ses seaux. Résolvez votre calcul et tirez ' +
       'le seau qui porte la bonne réponse vers vous, puis relâchez pour lancer l’eau dans le ' +
-      'trou : un mauvais seau se renverse sur place ! L’eau s’infiltre dans le sable, alors ' +
+      'trou. Attention : un mauvais seau lance du sable, qui fait baisser l’eau ! L’eau ' +
+      's’infiltre aussi dans le sable, alors ' +
       'remplissez vite, à deux : quand elle atteint le canal, le poisson file vers un trou plus ' +
       'grand. Au bout du troisième, c’est la mer !',
   },
