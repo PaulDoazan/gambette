@@ -2,7 +2,8 @@ import type { OpPanelHandles } from './sections';
 
 const RANDOM_COUNT = 10;
 
-const allCbsOf = (h: OpPanelHandles): HTMLInputElement[] => [h.randomCb, ...h.pairCbs];
+const allCbsOf = (h: OpPanelHandles): HTMLInputElement[] =>
+  h.rangeCb ? [h.randomCb, ...h.pairCbs, h.rangeCb] : [h.randomCb, ...h.pairCbs];
 
 const setChecked = (cb: HTMLInputElement, checked: boolean): void => {
   if (cb.checked === checked) return;

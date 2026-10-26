@@ -16,10 +16,15 @@ const DIFFICULTY_RANGES: Record<Difficulty, Range> = {
 // la seule valeur < 2 (ou la seule négative), trouvable sans calculer.
 const SMALL_ANSWER = 1;
 
+// Plafond des candidats pour les tables ; une réponse au-delà (additions à 2 chiffres, jusqu'à
+// 99 + 99) garde ses mauvaises réponses de part et d'autre.
+const MAX_CANDIDATE = 100;
+
 const candidatesIn = (answer: number, range: Range): number[] => {
   const out: number[] = [];
   const low = answer <= SMALL_ANSWER ? answer - range.max : 2;
-  for (let v = low; v <= 100; v++) {
+  const high = answer <= MAX_CANDIDATE ? MAX_CANDIDATE : answer + range.max;
+  for (let v = low; v <= high; v++) {
     if (v === answer) continue;
     const dist = Math.abs(v - answer);
     if (dist >= range.min && dist <= range.max) out.push(v);

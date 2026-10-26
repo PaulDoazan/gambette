@@ -1,4 +1,4 @@
-import type { Op, Pair } from '../domain/calcs';
+import { TWO_DIGIT_MAX, TWO_DIGIT_MIN, type AddRange, type Op, type Pair } from '../domain/calcs';
 
 const MUL_TABLES = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const ADD_TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
@@ -16,7 +16,12 @@ export interface OpPanelHandles {
   panel: HTMLDivElement;
   randomCb: HTMLInputElement;
   pairCbs: HTMLInputElement[];
+  /** Case des additions à 2 chiffres (onglet Addition seulement). */
+  rangeCb: HTMLInputElement | null;
 }
+
+/** Fourchette proposée tant qu'aucune n'a été choisie. */
+const DEFAULT_ADD_RANGE: AddRange = { min: 10, max: 30 };
 
 export const pairKey = (a: number, b: number, op: Op): string => `${op}:${a}x${b}`;
 
@@ -176,6 +181,88 @@ const buildRandomRow = (op: Op): { row: HTMLLabelElement; cb: HTMLInputElement }
   return { row, cb };
 };
 
+const buildBoundInput = (cls: string, value: number, label: string): HTMLInputElement => {
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.inputMode = 'numeric';
+  input.className = cls;
+  input.min = String(TWO_DIGIT_MIN);
+  input.max = String(TWO_DIGIT_MAX);
+  input.value = String(value);
+  input.setAttribute('aria-label', label);
+  return input;
+};
+
+const clampBound = (raw: string, fallback: number, lo: number, hi: number): number => {
+  const n = Math.round(Number(raw));
+  return Number.isFinite(n) && raw.trim() !== '' ? Math.max(lo, Math.min(hi, n)) : fallback;
+};
+
+/**
+ * Bornes à 2 chiffres, le max au-dessus du min : la borne qu'on vient de régler est gardée,
+ * l'autre s'écarte si besoin.
+ */
+const wireBounds = (
+  cb: HTMLInputElement,
+  minInput: HTMLInputElement,
+  maxInput: HTMLInputElement,
+): void => {
+  const apply = (min: number, max: number): void => {
+    minInput.value = cb.dataset.min = String(min);
+    maxInput.value = cb.dataset.max = String(max);
+    if (cb.checked) return;
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  minInput.addEventListener('change', () => {
+    const min = clampBound(
+      minInput.value,
+      Number(cb.dataset.min),
+      TWO_DIGIT_MIN,
+      TWO_DIGIT_MAX - 1,
+    );
+    apply(min, Math.max(min + 1, Number(cb.dataset.max)));
+  });
+  maxInput.addEventListener('change', () => {
+    const max = clampBound(
+      maxInput.value,
+      Number(cb.dataset.max),
+      TWO_DIGIT_MIN + 1,
+      TWO_DIGIT_MAX,
+    );
+    apply(Math.min(max - 1, Number(cb.dataset.min)), max);
+  });
+};
+
+/** Additions à 2 chiffres : une case et la fourchette des deux termes. */
+const buildRangeBlock = (
+  initial: AddRange | null,
+): { block: HTMLDivElement; cb: HTMLInputElement } => {
+  const { min, max } = initial ?? DEFAULT_ADD_RANGE;
+  const block = document.createElement('div');
+  block.className = 'cp-range';
+  const head = document.createElement('label');
+  head.className = 'cp-range-head';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = initial !== null;
+  cb.dataset.op = 'add';
+  cb.dataset.range = 'true';
+  cb.dataset.min = String(min);
+  cb.dataset.max = String(max);
+  const title = document.createElement('span');
+  title.textContent = 'Additions à 2 chiffres';
+  head.append(cb, title);
+  const bounds = document.createElement('div');
+  bounds.className = 'cp-range-bounds';
+  const minInput = buildBoundInput('cp-range-min', min, 'Plus petit nombre');
+  const maxInput = buildBoundInput('cp-range-max', max, 'Plus grand nombre');
+  bounds.append('Nombres de ', minInput, ' à ', maxInput);
+  block.append(head, bounds);
+  wireBounds(cb, minInput, maxInput);
+  return { block, cb };
+};
+
 const tablesFor = (op: Op): readonly number[] => {
   if (op === 'mul') return MUL_TABLES;
   if (op === 'add') return ADD_TABLES;
@@ -186,6 +273,7 @@ export const buildOpPanel = (
   op: Op,
   has: Set<string>,
   checkboxes: HTMLInputElement[],
+  addRange: AddRange | null = null,
 ): OpPanelHandles => {
   const panel = document.createElement('div');
   panel.className = 'cp-panel';
@@ -197,5 +285,12 @@ export const buildOpPanel = (
     panel.appendChild(buildSection(a, op, has, pairCbs));
   }
   pairCbs.forEach((cb) => checkboxes.push(cb));
-  return { panel, randomCb, pairCbs };
+  let rangeCb: HTMLInputElement | null = null;
+  if (op === 'add') {
+    const { block, cb } = buildRangeBlock(addRange);
+    panel.appendChild(block);
+    checkboxes.push(cb);
+    rangeCb = cb;
+  }
+  return { panel, randomCb, pairCbs, rangeCb };
 };
