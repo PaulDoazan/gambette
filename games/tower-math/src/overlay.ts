@@ -54,7 +54,7 @@ export function createOverlay(
 
   // Écart unique (suit la hauteur de l'écran) : entre le cadre du calcul et le
   // 1er résultat comme entre deux résultats.
-  const CHOICES_GAP = 'clamp(10px,4.5vh,32px)';
+  const CHOICES_GAP = 'clamp(6px,4.5vh,32px)';
 
   // Panneau quiz (bord droit) : le calcul en haut, les 5 résultats juste dessous.
   const quizPanel = document.createElement('div');
@@ -68,7 +68,7 @@ export function createOverlay(
   calc.dataset.test = 'tower-calc';
   calc.style.cssText =
     'padding:10px 8px;border-radius:12px;text-align:center;' +
-    'font:800 30px system-ui,sans-serif;color:#fff;' +
+    'font:800 clamp(20px,8vh,30px) system-ui,sans-serif;color:#fff;flex-shrink:0;' +
     'background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.5);' +
     'pointer-events:auto;';
 
@@ -76,14 +76,17 @@ export function createOverlay(
   choices.dataset.test = 'tower-choices';
   choices.style.cssText =
     'display:flex;flex-direction:column;justify-content:flex-start;align-items:center;' +
-    `gap:${CHOICES_GAP};`;
+    `gap:${CHOICES_GAP};flex:1 1 auto;min-height:0;`;
 
   // Boutons étroits et hauts (taille, texte et espacement suivent la hauteur de
-  // l'écran) : les 5 tiennent en paysage sur téléphone (~320 px de haut).
+  // l'écran). Sur un écran très bas (paysage avec les barres du navigateur), ils
+  // rétrécissent pour que les 5 restent visibles : la bonne réponse ne doit
+  // jamais sortir de l'écran.
   const CHOICE_CSS =
-    'width:min(130px,70%);height:clamp(32px,10vh,64px);padding:0 12px;flex-shrink:0;' +
+    'width:min(130px,70%);flex-grow:0;flex-shrink:1;flex-basis:clamp(32px,10vh,64px);' +
+    'min-height:0;padding:0 12px;' +
     'border:none;border-radius:10px;cursor:pointer;pointer-events:auto;' +
-    'font:700 clamp(22px,4.5vh,30px) system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;' +
+    'font:700 clamp(16px,4.5vh,30px) system-ui,sans-serif;background:rgba(255,255,255,0.92);color:#1a1a2e;' +
     'transition:background-color 120ms,color 120ms;';
   const buttons: HTMLButtonElement[] = [];
   for (let slot = 0; slot < CHOICES_COUNT; slot++) {

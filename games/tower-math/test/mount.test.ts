@@ -106,6 +106,21 @@ describe('mountTowerMath', () => {
     inst.unmount();
   });
 
+  it('écran peu haut : la colonne et les 5 boutons rétrécissent au lieu de déborder', () => {
+    // Sans cela, en paysage avec les barres du navigateur (< 305 px de haut), le
+    // 5e bouton sortait de l'écran : la bonne réponse pouvait être invisible.
+    const el = document.createElement('div');
+    const inst = mountTowerMath(el, makeCtx());
+    const column = q(el, 'tower-choices');
+    expect(column.style.flexGrow).toBe('1');
+    expect(column.style.minHeight).toBe('0px');
+    for (const b of buttons(el)) {
+      expect(b.style.flexShrink).toBe('1');
+      expect(b.style.minHeight).toBe('0px');
+    }
+    inst.unmount();
+  });
+
   it("répond dès l'appui (pointerdown), sans attendre le relâcher", () => {
     const el = document.createElement('div');
     const inst = mountTowerMath(el, makeCtx());
