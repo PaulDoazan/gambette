@@ -1,6 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { BUCKET_RADIUS } from '../config/dimensions';
-import { SPILL_MS } from '../config/water';
 import { COLORS } from '../config/theme';
 import type { Player, Vec } from '../domain/types';
 import {
@@ -23,8 +22,6 @@ export interface Bucket {
   setEmpty(empty: boolean): void;
   position(): Vec;
   setPosition(p: Vec): void;
-  /** Mauvais seau : il se vide sur place (l'eau disparaît en se renversant). */
-  spill(): void;
   /** Éclat : nouveau seau (nouveau calcul). */
   flash(): void;
   update(dtMs: number): void;
@@ -68,7 +65,6 @@ export function createBucket(player: Player, home: Vec): Bucket {
 
   let value = 0;
   let empty = false;
-  let spillElapsed: number | null = null;
   let flashElapsed: number | null = null;
 
   const drawInside = (fullness: number): void => {
@@ -107,35 +103,15 @@ export function createBucket(player: Player, home: Vec): Bucket {
     isEmpty: () => empty,
     setEmpty: (e) => {
       empty = e;
-      spillElapsed = null;
-      view.rotation = player === 'B' ? Math.PI : 0;
       refresh();
     },
     position: () => ({ x: view.x, y: view.y }),
     setPosition,
-    spill: () => {
-      empty = true;
-      spillElapsed = 0;
-    },
     flash: () => {
       flashElapsed = 0;
       sparks = makeSparks(14);
     },
     update: (dtMs) => {
-      const base = player === 'B' ? Math.PI : 0;
-      if (spillElapsed !== null) {
-        spillElapsed += dtMs;
-        const t = Math.min(1, spillElapsed / SPILL_MS);
-        // Le seau bascule puis revient, l'eau se vide.
-        view.rotation = base + Math.sin(Math.PI * t) * 0.5;
-        drawInside(1 - t);
-        view.alpha = 1 - 0.55 * t;
-        if (t >= 1) {
-          spillElapsed = null;
-          view.rotation = base;
-          refresh();
-        }
-      }
       if (flashElapsed === null) return;
       flashElapsed += dtMs;
       const f = burstFrame(flashElapsed / BURST_MS);

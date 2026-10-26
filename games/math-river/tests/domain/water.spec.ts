@@ -19,6 +19,18 @@ describe('createWater', () => {
     expect(w.level()).toBeCloseTo(0.5 + R0.perBucket);
   });
 
+  it('du sable fait baisser le niveau de l’apport d’un seau de la manche', () => {
+    const w = createWater(R0, 0.5);
+    w.sand();
+    expect(w.level()).toBeCloseTo(0.5 - R0.perBucket);
+  });
+
+  it('du sable ne fait jamais descendre l’eau sous le plancher MIN_LEVEL', () => {
+    const w = createWater(R0, MIN_LEVEL + R0.perBucket / 2);
+    w.sand();
+    expect(w.level()).toBe(MIN_LEVEL);
+  });
+
   it('l’eau s’infiltre avec le temps, au rythme de la manche', () => {
     const w = createWater(R0, 0.5);
     w.update(1000);

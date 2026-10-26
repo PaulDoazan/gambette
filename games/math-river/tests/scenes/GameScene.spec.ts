@@ -125,22 +125,59 @@ describe('GameScene', () => {
     expect(scene.calc('A')).not.toBe(before);
   });
 
-  it('mauvais seau : il se vide sur place, le trou ne se remplit pas, le calcul reste', () => {
+  it('mauvais seau dans le trou : il part avec du sable, l’eau baisse d’un seau, le calcul reste', () => {
     const { scene } = make();
+    const ground = scene.view.getChildByLabel('ground', true)!;
+    for (const pl of ['A', 'B'] as const)
+      throwBucket(scene, pl, scene.correctIndex(pl), holeCenter());
+    run(scene, MAX_FLIGHT);
     const before = scene.calc('A');
+    const level = scene.level();
     const i = wrongIndex(scene, 'A');
     throwBucket(scene, 'A', i, holeCenter());
     expect(scene.buckets('A')[i]!.empty).toBe(true);
+    expect(scene.view.getChildByLabel('sand-shot', true)).not.toBeNull();
+    expect(scene.level()).toBe(level); // encore en vol
     run(scene, MAX_FLIGHT);
-    expect(scene.level()).toBeLessThan(START_LEVEL);
+    expect(scene.level()).toBeCloseTo(level - WATER_PER_BUCKET - seeped(MAX_FLIGHT), 2);
+    expect(scene.view.getChildByLabel('sand-shot', true)).toBeNull();
+    expect(ground.getChildByLabel('sand-in-water')).not.toBeNull();
     expect(scene.calc('A')).toBe(before);
     expect(scene.buckets('A')[i]!.empty).toBe(true);
+    expect(scene.buckets('A').filter((b) => b.empty)).toHaveLength(1);
+  });
+
+  it('mauvais seau à côté : le sable reste sec sur la plage, niveau inchangé (hors infiltration)', () => {
+    const { scene } = make();
+    const ground = scene.view.getChildByLabel('ground', true)!;
+    const c = holeCenter();
+    throwBucket(scene, 'A', wrongIndex(scene, 'A'), { x: c.x - 300, y: c.y + 260 });
+    run(scene, MAX_FLIGHT);
+    expect(scene.level()).toBeCloseTo(START_LEVEL - seeped(MAX_FLIGHT), 2);
+    expect(ground.getChildByLabel('sand-on-beach')).not.toBeNull();
+    expect(ground.getChildByLabel('sand-in-water')).toBeNull();
+  });
+
+  it('pendant le vol de son sable, le joueur ne peut pas saisir un autre seau', () => {
+    const { scene } = make();
+    throwBucket(scene, 'A', wrongIndex(scene, 'A'), holeCenter());
+    const ok = scene.correctIndex('A');
+    throwBucket(scene, 'A', ok, holeCenter());
+    expect(scene.buckets('A')[ok]!.empty).toBe(false);
+    run(scene, MAX_FLIGHT);
+    throwBucket(scene, 'A', ok, holeCenter());
+    expect(scene.buckets('A')[ok]!.empty).toBe(true);
   });
 
   it('un seau vide ne se saisit plus ; pas de tir sous le seuil d’étirement', () => {
     const { scene } = make();
     const i = wrongIndex(scene, 'A');
     throwBucket(scene, 'A', i, holeCenter());
+    run(scene, MAX_FLIGHT);
+    scene.pointerDown(1, bucketHome('A', i));
+    scene.pointerMove(1, gripFor('A', i, holeCenter()));
+    scene.pointerUp(1);
+    expect(scene.view.getChildByLabel('sand-shot', true)).toBeNull();
     // Petit glisser sur le bon seau : il revient à sa place sans tirer.
     const ok = scene.correctIndex('A');
     const home = bucketHome('A', ok);

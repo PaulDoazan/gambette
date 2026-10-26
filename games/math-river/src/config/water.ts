@@ -10,6 +10,7 @@ export const STRUGGLE_LEVEL = 0.4;
 
 /** Durée du vol de l'eau (ms) pour une portée donnée (px). */
 export const flightMs = (range: number): number => 500 + 0.5 * range;
-/** Durée du vidage d'un mauvais seau sur place, et de la vie d'une flaque. */
-export const SPILL_MS = 500;
+/** Vie d'une flaque d'eau tombée à côté du trou. */
 export const PUDDLE_MS = 1400;
+/** Vie du sable d'un mauvais seau à l'impact : il s'étale, se mouille dans l'eau, puis disparaît. */
+export const SAND_MS = 1500;
