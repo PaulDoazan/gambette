@@ -1,0 +1,11 @@
+// Déploiement Cloudflare Workers (static assets), buildé par Workers Builds à chaque push sur main.
+// Build command : pnpm turbo run build --filter=@gambette/web
+{
+  "name": "gambette",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./apps/web/.output/public",
+    // Le site est une SPA (ssr: false) : toute route inconnue renvoie index.html.
+    "not_found_handling": "single-page-application",
+  },
+}
