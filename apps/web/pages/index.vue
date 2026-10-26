@@ -11,9 +11,8 @@ function play(key: string): void {
 
 <template>
   <VContainer class="home py-8">
-    <MoleculeScreenHeader />
-
     <section class="hero">
+      <AtomFullscreenToggle inline color="white" class="hero__fullscreen" />
       <div class="hero__decor" aria-hidden="true">
         <AtomShapeArcs color="#FFCC5C" class="hero__shape hero__shape--arcs" />
       </div>
@@ -86,6 +85,12 @@ function play(key: string): void {
   transform: rotate(7deg); /* penche de 10° dans le sens horaire */
 }
 
+.hero__fullscreen {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+}
 .hero__content {
   position: relative;
   z-index: 1;
