@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   TABLE_LISTS,
   getTableList,
-  twoDigitAddPairs,
-  twoDigitAddRange,
+  twoDigitPairs,
+  twoDigitRange,
   type TableListId,
 } from '../src/domain/calcs';
 
@@ -97,9 +97,9 @@ describe('randomMulPairs', () => {
   });
 });
 
-describe('twoDigitAddPairs', () => {
-  it('chaque terme dans la fourchette, bornes comprises', () => {
-    const pairs = twoDigitAddPairs(20, 30);
+describe('twoDigitPairs', () => {
+  it('chaque nombre dans la fourchette, bornes comprises', () => {
+    const pairs = twoDigitPairs('add', 20, 30);
     expect(pairs).toHaveLength(11 * 11);
     expect(pairs).toContainEqual({ a: 20, b: 30, op: 'add' });
     for (const p of pairs) {
@@ -108,17 +108,38 @@ describe('twoDigitAddPairs', () => {
       expect(p.b).toBeLessThanOrEqual(30);
     }
   });
-});
 
-describe('twoDigitAddRange', () => {
-  it('retrouve la fourchette d’une sélection', () => {
-    const pairs = [{ a: 3, b: 4, op: 'add' as const }, ...twoDigitAddPairs(15, 42)];
-    expect(twoDigitAddRange(pairs)).toEqual({ min: 15, max: 42 });
+  it('aussi pour la multiplication', () => {
+    expect(twoDigitPairs('mul', 11, 12)).toEqual([
+      { a: 11, b: 11, op: 'mul' },
+      { a: 11, b: 12, op: 'mul' },
+      { a: 12, b: 11, op: 'mul' },
+      { a: 12, b: 12, op: 'mul' },
+    ]);
   });
 
-  it('null sans addition à 2 chiffres, y compris pour la table de 10', () => {
-    expect(twoDigitAddRange(getTableList('tables_all').pairs)).toBeNull();
-    expect(twoDigitAddRange([{ a: 10, b: 10, op: 'add' }])).toBeNull();
-    expect(twoDigitAddRange([{ a: 12, b: 15, op: 'mul' }])).toBeNull();
+  it('soustraction : le plus grand nombre en premier, jamais de résultat négatif', () => {
+    const pairs = twoDigitPairs('sub', 20, 25);
+    expect(pairs).toHaveLength((6 * 7) / 2);
+    expect(pairs).toContainEqual({ a: 25, b: 20, op: 'sub' });
+    expect(pairs.every((p) => p.a >= p.b)).toBe(true);
+  });
+});
+
+describe('twoDigitRange', () => {
+  it('retrouve la fourchette d’une sélection, par opération', () => {
+    const pairs = [
+      { a: 3, b: 4, op: 'add' as const },
+      ...twoDigitPairs('add', 15, 42),
+      ...twoDigitPairs('mul', 11, 20),
+    ];
+    expect(twoDigitRange(pairs, 'add')).toEqual({ min: 15, max: 42 });
+    expect(twoDigitRange(pairs, 'mul')).toEqual({ min: 11, max: 20 });
+  });
+
+  it('null sans calcul dans une fourchette, y compris pour la table de 10', () => {
+    expect(twoDigitRange(getTableList('tables_all').pairs, 'mul')).toBeNull();
+    expect(twoDigitRange([{ a: 10, b: 10, op: 'add' }], 'add')).toBeNull();
+    expect(twoDigitRange([{ a: 12, b: 15, op: 'mul' }], 'add')).toBeNull();
   });
 });

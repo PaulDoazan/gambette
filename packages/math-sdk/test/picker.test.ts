@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { openCalcsPicker } from '../src/picker';
-import { twoDigitAddPairs, type Pair } from '../src/domain/calcs';
+import { twoDigitPairs, type Pair } from '../src/domain/calcs';
 
 const INITIAL: Pair[] = [{ a: 7, b: 8, op: 'mul' }];
 const box = (root: ParentNode, a: number, b: number, op: string) =>
@@ -116,47 +116,102 @@ describe('openCalcsPicker, tables repliables', () => {
   });
 });
 
-describe('openCalcsPicker, additions à 2 chiffres', () => {
+describe('openCalcsPicker, sous-catégories', () => {
   afterEach(() => {
     document.body.innerHTML = '';
   });
+  const nodesOf = (op: string) =>
+    [...document.querySelectorAll<HTMLElement>(`.cp-panel[data-op="${op}"] > .cp-section`)].map(
+      (n) => n.querySelector('.cp-section-name')!.textContent,
+    );
+  const tablesNode = (op: string) =>
+    document.querySelector<HTMLElement>(`.cp-panel[data-op="${op}"] > .cp-tables`)!;
+
+  it('multiplication et addition : les tables et la fourchette, au même niveau', () => {
+    void openCalcsPicker({ initial: INITIAL });
+    expect(nodesOf('mul')).toEqual([
+      'Tables de multiplication',
+      'Multiplications dans une fourchette',
+    ]);
+    expect(nodesOf('add')).toEqual(['Tables d’addition', 'Additions dans une fourchette']);
+    expect(nodesOf('sub')).toEqual(['Tables de soustraction', 'Soustractions dans une fourchette']);
+  });
+
+  it('les tables sont regroupées sous leur sous-catégorie, avec le tirage aléatoire', () => {
+    void openCalcsPicker({ initial: INITIAL });
+    const node = tablesNode('mul');
+    expect(node.querySelectorAll('.cp-section[data-a]')).toHaveLength(9);
+    expect(node.querySelector('input[data-random]')).not.toBeNull();
+    // Pas de compteur global : chaque table a le sien.
+    expect(node.querySelector(':scope > .cp-section-header .cp-section-count')).toBeNull();
+    expect(node.querySelector('.cp-section[data-a="7"] .cp-section-count')!.textContent).toBe(
+      '1/10',
+    );
+  });
+
+  it('la case des tables coche toutes les tables', async () => {
+    const p = openCalcsPicker({ initial: INITIAL });
+    check(tablesNode('add').querySelector<HTMLInputElement>('.cp-section-header input')!, true);
+    document.querySelector<HTMLButtonElement>('.cp-back')!.click();
+    const out = await p;
+    expect(out).toHaveLength(100);
+    expect(out.every((q) => q.op === 'add')).toBe(true);
+  });
+});
+
+describe.each([
+  ['add', 36],
+  ['mul', 36],
+  ['sub', 21],
+] as const)('openCalcsPicker, calculs %s dans une fourchette', (op, count2025) => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+  const other = op === 'add' ? 'mul' : 'add';
+  const third = op === 'sub' ? 'mul' : 'sub';
+  const node = (root: ParentNode) =>
+    root.querySelector<HTMLElement>(`.cp-panel[data-op="${op}"] .cp-range`)!;
   const rangeCb = (root: ParentNode) =>
-    root.querySelector<HTMLInputElement>('.cp-panel[data-op="add"] .cp-range input[data-range]')!;
-  const minInput = (root: ParentNode) => root.querySelector<HTMLInputElement>('.cp-range-min')!;
-  const maxInput = (root: ParentNode) => root.querySelector<HTMLInputElement>('.cp-range-max')!;
+    node(root).querySelector<HTMLInputElement>('input[data-range]')!;
+  const minInput = (root: ParentNode) =>
+    node(root).querySelector<HTMLInputElement>('.cp-range-min')!;
+  const maxInput = (root: ParentNode) =>
+    node(root).querySelector<HTMLInputElement>('.cp-range-max')!;
   const setValue = (input: HTMLInputElement, v: string) => {
     input.value = v;
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  it('décochée par défaut, dans l’onglet Addition', () => {
+  it('décochée par défaut, la fourchette affichée dans l’en-tête', () => {
     void openCalcsPicker({ initial: INITIAL });
     expect(rangeCb(document).checked).toBe(false);
+    expect(node(document).querySelector('.cp-section-count')!.textContent).toBe('10 à 30');
   });
 
-  it('régler la fourchette coche la case et donne toutes les additions de la fourchette', async () => {
-    const p = openCalcsPicker({ initial: INITIAL });
+  it('régler la fourchette coche la case et donne tous les calculs de la fourchette', async () => {
+    const p = openCalcsPicker({ initial: [{ a: 7, b: 8, op: other }] });
     setValue(minInput(document), '20');
     setValue(maxInput(document), '25');
     expect(rangeCb(document).checked).toBe(true);
+    expect(node(document).querySelector('.cp-section-count')!.textContent).toBe('20 à 25');
     // Les calculs d'une autre opération sont décochés, comme pour les tables.
-    expect(box(document, 7, 8, 'mul').checked).toBe(false);
+    expect(box(document, 7, 8, other).checked).toBe(false);
     document.querySelector<HTMLButtonElement>('.cp-back')!.click();
     const out = await p;
-    expect(out).toHaveLength(36);
-    expect(out).toContainEqual({ a: 20, b: 25, op: 'add' });
-    expect(out.every((q) => q.op === 'add' && q.a >= 20 && q.b <= 25)).toBe(true);
+    expect(out).toHaveLength(count2025);
+    expect(out).toContainEqual({ a: 25, b: 20, op });
+    expect(out.every((q) => q.op === op && q.a >= 20 && q.b <= 25)).toBe(true);
   });
 
   it('se rouvre avec la fourchette enregistrée', () => {
-    const initial = [{ a: 3, b: 4, op: 'add' as const }, ...twoDigitAddPairs(10, 40)];
+    const initial = [{ a: 3, b: 4, op }, ...twoDigitPairs(op, 10, 40)];
     void openCalcsPicker({ initial });
     expect(rangeCb(document).checked).toBe(true);
     expect(minInput(document).value).toBe('10');
     expect(maxInput(document).value).toBe('40');
-    expect(box(document, 3, 4, 'add').checked).toBe(true);
-    // 10 + 10 vient de la fourchette, pas de la table de 10.
-    expect(box(document, 10, 10, 'add').checked).toBe(false);
+    expect(box(document, 3, 4, op).checked).toBe(true);
+    // 10 + 10 (ou 10 × 10) vient de la fourchette, pas de la table de 10.
+    expect(box(document, 10, 10, op).checked).toBe(false);
   });
 
   it('garde des bornes à 2 chiffres, le max au-dessus du min', () => {
@@ -173,8 +228,8 @@ describe('openCalcsPicker, additions à 2 chiffres', () => {
   });
 
   it('cocher un calcul d’une autre opération décoche la fourchette', () => {
-    void openCalcsPicker({ initial: twoDigitAddPairs(10, 20) });
-    check(box(document, 6, 8, 'mul'), true);
+    void openCalcsPicker({ initial: twoDigitPairs(op, 10, 20) });
+    check(box(document, 6, 8, third), true);
     expect(rangeCb(document).checked).toBe(false);
   });
 });
