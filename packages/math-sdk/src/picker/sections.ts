@@ -1,4 +1,4 @@
-import { TWO_DIGIT_MAX, TWO_DIGIT_MIN, type AddRange, type Op, type Pair } from '../domain/calcs';
+import { TWO_DIGIT_MAX, TWO_DIGIT_MIN, type CalcRange, type Op, type Pair } from '../domain/calcs';
 
 const MUL_TABLES = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const ADD_TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
@@ -16,12 +16,19 @@ export interface OpPanelHandles {
   panel: HTMLDivElement;
   randomCb: HTMLInputElement;
   pairCbs: HTMLInputElement[];
-  /** Case des additions à 2 chiffres (onglet Addition seulement). */
+  /** Case des calculs dans une fourchette. */
   rangeCb: HTMLInputElement | null;
 }
 
 /** Fourchette proposée tant qu'aucune n'a été choisie. */
-const DEFAULT_ADD_RANGE: AddRange = { min: 10, max: 30 };
+const DEFAULT_RANGE: CalcRange = { min: 10, max: 30 };
+
+/** Sous-catégories d'une opération : ses tables, et ses calculs dans une fourchette. */
+const SUBCATEGORIES: Partial<Record<Op, { tables: string; range: string }>> = {
+  mul: { tables: 'Tables de multiplication', range: 'Multiplications dans une fourchette' },
+  add: { tables: 'Tables d’addition', range: 'Additions dans une fourchette' },
+  sub: { tables: 'Tables de soustraction', range: 'Soustractions dans une fourchette' },
+};
 
 export const pairKey = (a: number, b: number, op: Op): string => `${op}:${a}x${b}`;
 
@@ -55,11 +62,12 @@ const buildRow = (
 };
 
 /**
- * En-tête d'une table : la case coche toute la table ; le reste de la ligne (nom, nombre de
- * calculs choisis, flèche) la déplie ou la replie.
+ * En-tête d'une table ou d'une sous-catégorie : la case coche tout son contenu ; le reste de la
+ * ligne (nom, nombre de calculs choisis, flèche) la déplie ou la replie.
  */
 const buildSectionHeader = (
-  a: number,
+  name: string,
+  cbLabel: string,
 ): {
   header: HTMLDivElement;
   cb: HTMLInputElement;
@@ -70,20 +78,19 @@ const buildSectionHeader = (
   header.className = 'cp-section-header';
   const cb = document.createElement('input');
   cb.type = 'checkbox';
-  cb.setAttribute('aria-label', `Toute la table de ${a}`);
+  cb.setAttribute('aria-label', cbLabel);
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'cp-section-toggle';
   toggle.setAttribute('aria-expanded', 'false');
   const text = document.createElement('span');
   text.className = 'cp-section-name';
-  text.textContent = `Table de ${a}`;
+  text.textContent = name;
   const count = document.createElement('span');
   count.className = 'cp-section-count';
   const chevron = document.createElement('span');
   chevron.className = 'cp-chevron';
   chevron.setAttribute('aria-hidden', 'true');
-  chevron.textContent = '▸';
   toggle.append(text, count, chevron);
   header.append(cb, toggle);
   return { header, cb, toggle, count };
@@ -158,7 +165,12 @@ const buildSection = (
   const section = document.createElement('div');
   section.className = 'cp-section';
   section.dataset.a = String(a);
-  const { header, cb: headerCb, toggle, count } = buildSectionHeader(a);
+  const {
+    header,
+    cb: headerCb,
+    toggle,
+    count,
+  } = buildSectionHeader(`Table de ${a}`, `Toute la table de ${a}`);
   const rowsWrap = document.createElement('div');
   rowsWrap.className = 'cp-section-rows';
   section.append(header, rowsWrap);
@@ -206,10 +218,12 @@ const wireBounds = (
   cb: HTMLInputElement,
   minInput: HTMLInputElement,
   maxInput: HTMLInputElement,
+  onChange: () => void,
 ): void => {
   const apply = (min: number, max: number): void => {
     minInput.value = cb.dataset.min = String(min);
     maxInput.value = cb.dataset.max = String(max);
+    onChange();
     if (cb.checked) return;
     cb.checked = true;
     cb.dispatchEvent(new Event('change', { bubbles: true }));
@@ -234,33 +248,58 @@ const wireBounds = (
   });
 };
 
-/** Additions à 2 chiffres : une case et la fourchette des deux termes. */
-const buildRangeBlock = (
-  initial: AddRange | null,
-): { block: HTMLDivElement; cb: HTMLInputElement } => {
-  const { min, max } = initial ?? DEFAULT_ADD_RANGE;
-  const block = document.createElement('div');
-  block.className = 'cp-range';
-  const head = document.createElement('label');
-  head.className = 'cp-range-head';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
+/** Nœud « dans une fourchette » : la case, et la fourchette des deux nombres une fois déplié. */
+const buildRangeNode = (
+  op: Op,
+  name: string,
+  initial: CalcRange | null,
+): { node: HTMLDivElement; cb: HTMLInputElement } => {
+  const { min, max } = initial ?? DEFAULT_RANGE;
+  const node = document.createElement('div');
+  node.className = 'cp-section cp-group cp-range';
+  const { header, cb, toggle, count } = buildSectionHeader(name, name);
   cb.checked = initial !== null;
-  cb.dataset.op = 'add';
+  cb.dataset.op = op;
   cb.dataset.range = 'true';
   cb.dataset.min = String(min);
   cb.dataset.max = String(max);
-  const title = document.createElement('span');
-  title.textContent = 'Additions à 2 chiffres';
-  head.append(cb, title);
   const bounds = document.createElement('div');
-  bounds.className = 'cp-range-bounds';
+  bounds.className = 'cp-section-rows cp-range-bounds';
   const minInput = buildBoundInput('cp-range-min', min, 'Plus petit nombre');
   const maxInput = buildBoundInput('cp-range-max', max, 'Plus grand nombre');
   bounds.append('Nombres de ', minInput, ' à ', maxInput);
-  block.append(head, bounds);
-  wireBounds(cb, minInput, maxInput);
-  return { block, cb };
+  node.append(header, bounds);
+  const showBounds = (): void => {
+    count.textContent = `${cb.dataset.min} à ${cb.dataset.max}`;
+  };
+  showBounds();
+  wireBounds(cb, minInput, maxInput, showBounds);
+  wireCollapse(node, toggle, bounds);
+  return { node, cb };
+};
+
+/** Nœud des tables : toutes les tables de l'opération, et le tirage aléatoire parmi elles. */
+const buildTablesNode = (
+  name: string,
+  randomRow: HTMLLabelElement,
+  sections: readonly HTMLDivElement[],
+  pairCbs: readonly HTMLInputElement[],
+): HTMLDivElement => {
+  const node = document.createElement('div');
+  node.className = 'cp-section cp-group cp-tables';
+  const { header, cb, toggle, count } = buildSectionHeader(
+    name,
+    `Toutes les ${name.toLowerCase()}`,
+  );
+  const content = document.createElement('div');
+  content.className = 'cp-section-rows cp-group-body';
+  content.append(randomRow, ...sections);
+  node.append(header, content);
+  wireSectionToggle(cb, count, pairCbs);
+  // Pas de compteur pour l'ensemble des tables : chaque table montre déjà le sien.
+  count.remove();
+  wireCollapse(node, toggle, content);
+  return node;
 };
 
 const tablesFor = (op: Op): readonly number[] => {
@@ -273,24 +312,22 @@ export const buildOpPanel = (
   op: Op,
   has: Set<string>,
   checkboxes: HTMLInputElement[],
-  addRange: AddRange | null = null,
+  range: CalcRange | null = null,
 ): OpPanelHandles => {
   const panel = document.createElement('div');
   panel.className = 'cp-panel';
   panel.dataset.op = op;
   const { row: randomRow, cb: randomCb } = buildRandomRow(op);
-  panel.appendChild(randomRow);
   const pairCbs: HTMLInputElement[] = [];
-  for (const a of tablesFor(op)) {
-    panel.appendChild(buildSection(a, op, has, pairCbs));
-  }
+  const sections = tablesFor(op).map((a) => buildSection(a, op, has, pairCbs));
   pairCbs.forEach((cb) => checkboxes.push(cb));
-  let rangeCb: HTMLInputElement | null = null;
-  if (op === 'add') {
-    const { block, cb } = buildRangeBlock(addRange);
-    panel.appendChild(block);
-    checkboxes.push(cb);
-    rangeCb = cb;
+  const sub = SUBCATEGORIES[op];
+  if (!sub) {
+    panel.append(randomRow, ...sections);
+    return { panel, randomCb, pairCbs, rangeCb: null };
   }
+  const { node: rangeNode, cb: rangeCb } = buildRangeNode(op, sub.range, range);
+  panel.append(buildTablesNode(sub.tables, randomRow, sections, pairCbs), rangeNode);
+  checkboxes.push(rangeCb);
   return { panel, randomCb, pairCbs, rangeCb };
 };

@@ -110,7 +110,7 @@ export const CALCS_PICKER_CSS = `
   user-select: none;
   background: #ffeec2;
 }
-.cp-section-open .cp-section-header { border-bottom: 2px solid #111; }
+.cp-section-open > .cp-section-header { border-bottom: 2px solid #111; }
 .cp-section-toggle {
   flex: 1;
   display: flex;
@@ -132,12 +132,24 @@ export const CALCS_PICKER_CSS = `
   color: rgba(17, 17, 17, 0.6);
 }
 .cp-chevron {
-  display: inline-block;
-  width: 20px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   transition: transform 0.15s;
 }
-.cp-section-open .cp-chevron { transform: rotate(90deg); }
+/* Chevron dessiné : bien visible et facile à viser au doigt. */
+.cp-chevron::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  margin-left: -5px;
+  border-right: 4px solid #111;
+  border-bottom: 4px solid #111;
+  transform: rotate(-45deg);
+}
+.cp-section-open > .cp-section-header .cp-chevron { transform: rotate(90deg); }
 .cp-section-rows { padding: 0 6px; background: #fff8e5; }
 .cp-section-header input[type="checkbox"] {
   width: 22px;
@@ -163,34 +175,16 @@ export const CALCS_PICKER_CSS = `
   margin-right: 12px;
   accent-color: #ff7a2b;
 }
-.cp-range {
-  margin-top: 4px;
-  border: 2px solid #111;
-  border-radius: 8px;
-  background: #ffeec2;
-  padding: 4px 10px 10px;
-}
-.cp-range-head {
-  display: flex;
-  align-items: center;
-  min-height: 40px;
-  font-size: 16px;
-  font-weight: 800;
-  cursor: pointer;
-  user-select: none;
-}
-.cp-range-head input[type="checkbox"] {
-  width: 22px;
-  height: 22px;
-  margin: 0 12px 0 0;
-  accent-color: #ff7a2b;
-}
-.cp-range-bounds {
+.cp-group { margin-bottom: 12px; }
+.cp-group > .cp-section-header { font-size: 18px; padding: 6px 8px; background: #ffd76a; }
+.cp-group-body { padding: 10px 8px 2px; }
+.cp-group-body .cp-random-row { margin-bottom: 8px; }
+.cp-range-bounds:not([hidden]) {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding-left: 34px;
+  padding: 10px 12px;
   font-size: 16px;
   font-weight: 700;
 }

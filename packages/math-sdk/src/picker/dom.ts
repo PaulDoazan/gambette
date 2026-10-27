@@ -1,4 +1,4 @@
-import { twoDigitAddRange, type AddRange, type Op, type Pair } from '../domain/calcs';
+import { twoDigitRange, type CalcRange, type Op, type Pair } from '../domain/calcs';
 import { CALCS_PICKER_CSS } from './style';
 import {
   OP_LABEL,
@@ -71,19 +71,27 @@ const buildTabsRow = (tabs: readonly HTMLButtonElement[]): HTMLDivElement => {
   return row;
 };
 
-const inRange = (p: Pair, r: AddRange | null): boolean =>
-  r !== null && p.op === 'add' && p.a >= r.min && p.a <= r.max && p.b >= r.min && p.b <= r.max;
+type Ranges = Partial<Record<Op, CalcRange | null>>;
+
+const inRange = (p: Pair, ranges: Ranges): boolean => {
+  const r = ranges[p.op];
+  return !!r && p.a >= r.min && p.a <= r.max && p.b >= r.min && p.b <= r.max;
+};
 
 const buildBody = (initial: readonly Pair[], checkboxes: HTMLInputElement[]): HTMLDivElement => {
   const body = document.createElement('div');
   body.className = 'cp-body';
-  const addRange = twoDigitAddRange(initial);
-  // Les calculs de la fourchette (dont 10 + 10) ne cochent pas les tables.
-  const has = initialKeys(initial.filter((p) => !inRange(p, addRange)));
+  const ranges: Ranges = {
+    mul: twoDigitRange(initial, 'mul'),
+    add: twoDigitRange(initial, 'add'),
+    sub: twoDigitRange(initial, 'sub'),
+  };
+  // Les calculs d'une fourchette (dont 10 + 10, 10 × 10, 10 − 10) ne cochent pas les tables.
+  const has = initialKeys(initial.filter((p) => !inRange(p, ranges)));
   const tabs = TAB_OPS.map((op, i) => buildTab(op, i === 0));
   body.appendChild(buildTabsRow(tabs));
   const handles: OpPanelHandles[] = TAB_OPS.map((op) =>
-    buildOpPanel(op, has, checkboxes, addRange),
+    buildOpPanel(op, has, checkboxes, ranges[op] ?? null),
   );
   handles.forEach((h, i) => {
     if (i !== 0) h.panel.style.display = 'none';

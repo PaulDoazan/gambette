@@ -1,4 +1,4 @@
-import { twoDigitAddPairs, type Op, type Pair } from '../domain/calcs';
+import { twoDigitPairs, type Op, type Pair } from '../domain/calcs';
 import { buildPicker, type PickerHandles } from './dom';
 
 export interface CalcsPickerOptions {
@@ -18,10 +18,10 @@ const opOf = (raw: string | undefined): Op => {
 
 const pairsOfBox = (cb: HTMLInputElement): Pair[] =>
   cb.dataset.range
-    ? twoDigitAddPairs(Number(cb.dataset.min), Number(cb.dataset.max))
+    ? twoDigitPairs(opOf(cb.dataset.op), Number(cb.dataset.min), Number(cb.dataset.max))
     : [{ a: Number(cb.dataset.a), b: Number(cb.dataset.b), op: opOf(cb.dataset.op) }];
 
-/** Calculs cochés, sans doublon (10 + 10 peut venir de la table de 10 et de la fourchette). */
+/** Calculs cochés, sans doublon (10 + 10 ou 10 × 10 peut venir de la table de 10 et de la fourchette). */
 const readSelection = (boxes: readonly HTMLInputElement[]): Pair[] => {
   const byKey = new Map<string, Pair>();
   for (const p of boxes.filter((cb) => cb.checked).flatMap(pairsOfBox)) {
