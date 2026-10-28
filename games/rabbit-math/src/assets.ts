@@ -4,7 +4,6 @@ import { Assets } from 'pixi.js';
 // embarquées dans le build de la plateforme comme dans le build standalone.
 export const ASSET_URLS = {
   sun: new URL('../assets/sun.png', import.meta.url).href,
-  cog: new URL('../assets/cog.png', import.meta.url).href,
   carrot: new URL('../assets/carot.png', import.meta.url).href,
   weapon: new URL('../assets/weapon.png', import.meta.url).href,
   tree4: new URL('../assets/tree4branches.png', import.meta.url).href,

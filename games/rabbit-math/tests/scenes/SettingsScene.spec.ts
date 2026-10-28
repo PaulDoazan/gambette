@@ -1,93 +1,84 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { Container, FederatedPointerEvent } from 'pixi.js';
 import { createSettingsScene } from '../../src/scenes/SettingsScene';
-import { cycle, sessionImpactingChanged } from '../../src/scenes/SettingsPanel';
-import { DEFAULT_SETTINGS } from '../../src/services/Settings';
-import type { Pair } from '@gambette/math-sdk';
+import { DEFAULT_SETTINGS, settingsChanged } from '../../src/services/Settings';
 
-const stubDeps = {
-  onOpenCalcsPicker: async () => DEFAULT_SETTINGS.selectedPairs,
-};
+const tap = (view: Container, label: string) =>
+  (view.getChildByLabel(label, true) as Container).emit('pointertap', {} as FederatedPointerEvent);
+const flush = () => new Promise((r) => setTimeout(r, 0));
 
-const makeScene = (overrides: Partial<Parameters<typeof createSettingsScene>[0]> = {}) =>
-  createSettingsScene({
-    initial: DEFAULT_SETTINGS,
-    onChange: () => {},
-    onClose: () => {},
-    ...stubDeps,
-    ...overrides,
-  });
-
-describe('SettingsScene setRabbitsCount emits onChange', () => {
-  it('emits onChange with the patched settings', () => {
-    const onChange = vi.fn();
-    const scene = makeScene({ onChange });
-    scene.setRabbitsCount(6);
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ rabbitsCount: 6 }));
-  });
-});
-
-describe('SettingsScene setSelectedPairs emits onChange', () => {
-  it('emits onChange with the new pairs', () => {
-    const onChange = vi.fn();
-    const scene = makeScene({ onChange });
-    const pairs: Pair[] = [
-      { a: 2, b: 3, op: 'mul' },
-      { a: 5, b: 6, op: 'mul' },
-    ];
-    scene.setSelectedPairs(pairs);
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ selectedPairs: pairs }));
-  });
-});
-
-describe('SettingsScene setTapMode emits onChange', () => {
-  it('emits onChange with the new tapMode', () => {
-    const onChange = vi.fn();
-    const scene = makeScene({ onChange });
-    scene.setTapMode(true);
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ tapMode: true }));
-  });
-});
-
-describe('SettingsScene close', () => {
-  it('confirmCloseWith fires onClose with latest settings and restartRequested', () => {
+describe('SettingsScene', () => {
+  it('− / + bornés à [4, 8] lapins, Fermer renvoie les réglages', () => {
     const onClose = vi.fn();
-    const scene = makeScene({ onClose });
-    scene.setRabbitsCount(7);
-    scene.confirmCloseWith(true);
-    expect(onClose).toHaveBeenCalledWith(expect.objectContaining({ rabbitsCount: 7 }), true);
+    const s = createSettingsScene({
+      initial: { ...DEFAULT_SETTINGS, rabbitsCount: 4 },
+      onOpenCalcsPicker: vi.fn(),
+      onClose,
+    });
+    tap(s.view, 'minus');
+    expect(s.rabbitsCount()).toBe(4);
+    for (let i = 0; i < 6; i++) tap(s.view, 'plus');
+    expect(s.rabbitsCount()).toBe(8);
+    tap(s.view, 'minus');
+    tap(s.view, 'close');
+    expect(onClose).toHaveBeenCalledWith(expect.objectContaining({ rabbitsCount: 7 }));
+    s.destroy();
   });
-});
 
-describe('SettingsScene close without changes', () => {
-  it('does NOT prompt for restart when nothing changed', () => {
+  it('l’interrupteur bascule le mode tap', () => {
     const onClose = vi.fn();
-    const scene = makeScene({ onClose });
-    scene.confirmCloseWith(false);
-    expect(onClose).toHaveBeenCalledWith(expect.objectContaining(DEFAULT_SETTINGS), false);
+    const s = createSettingsScene({
+      initial: { ...DEFAULT_SETTINGS, tapMode: false },
+      onOpenCalcsPicker: vi.fn(),
+      onClose,
+    });
+    tap(s.view, 'tapMode');
+    tap(s.view, 'close');
+    expect(onClose).toHaveBeenCalledWith(expect.objectContaining({ tapMode: true }));
+    s.destroy();
+  });
+
+  it('« Choisir les calculs » ouvre le sélecteur et garde la nouvelle sélection', async () => {
+    const picked = [{ a: 2, b: 3, op: 'mul' as const }];
+    const onClose = vi.fn();
+    const onOpenCalcsPicker = vi.fn(async () => picked);
+    const s = createSettingsScene({ initial: DEFAULT_SETTINGS, onOpenCalcsPicker, onClose });
+    tap(s.view, 'calcs');
+    await flush();
+    expect(onOpenCalcsPicker).toHaveBeenCalledWith(DEFAULT_SETTINGS.selectedPairs);
+    tap(s.view, 'close');
+    expect(onClose).toHaveBeenCalledWith({ ...DEFAULT_SETTINGS, selectedPairs: picked });
+    s.destroy();
+  });
+
+  it('un sélecteur refermé après la destruction du panneau est sans effet', async () => {
+    let resolve!: (p: never[]) => void;
+    const s = createSettingsScene({
+      initial: DEFAULT_SETTINGS,
+      onOpenCalcsPicker: () => new Promise((r) => (resolve = r)),
+      onClose: vi.fn(),
+    });
+    tap(s.view, 'calcs');
+    s.destroy();
+    resolve([]);
+    await flush();
   });
 });
 
-describe('cycle', () => {
-  it('returns the next element wrapping at the end', () => {
-    expect(cycle(['a', 'b', 'c'], 'a')).toBe('b');
-    expect(cycle(['a', 'b', 'c'], 'c')).toBe('a');
+describe('settingsChanged', () => {
+  const a = DEFAULT_SETTINGS;
+  it('vrai si les calculs, le nombre de lapins ou le mode tap changent', () => {
+    expect(settingsChanged(a, { ...a, rabbitsCount: 6 })).toBe(true);
+    expect(settingsChanged(a, { ...a, selectedPairs: a.selectedPairs.slice(0, 5) })).toBe(true);
+    expect(settingsChanged(a, { ...a, tapMode: !a.tapMode })).toBe(true);
   });
-});
 
-describe('sessionImpactingChanged true cases', () => {
-  it('returns true when selectedPairs, rabbitsCount, or tapMode changes', () => {
-    const a = DEFAULT_SETTINGS;
-    expect(sessionImpactingChanged(a, { ...a, rabbitsCount: 6 })).toBe(true);
-    const fewer = a.selectedPairs.slice(0, 5);
-    expect(sessionImpactingChanged(a, { ...a, selectedPairs: fewer })).toBe(true);
-    expect(sessionImpactingChanged(a, { ...a, tapMode: !a.tapMode })).toBe(true);
+  it('faux pour les mêmes calculs dans un autre ordre', () => {
+    expect(settingsChanged(a, { ...a, selectedPairs: [...a.selectedPairs].reverse() })).toBe(false);
   });
-});
 
-describe('sessionImpactingChanged false cases', () => {
-  it('returns false when selectedPairs has same content in different order', () => {
-    const a = DEFAULT_SETTINGS;
-    const reversed = [...a.selectedPairs].reverse();
-    expect(sessionImpactingChanged(a, { ...a, selectedPairs: reversed })).toBe(false);
+  it('distingue l’opération : 3 × 4 n’est pas 3 + 4', () => {
+    const mul = { ...a, selectedPairs: [{ a: 3, b: 4, op: 'mul' as const }] };
+    expect(settingsChanged(mul, { ...a, selectedPairs: [{ a: 3, b: 4, op: 'add' }] })).toBe(true);
   });
 });

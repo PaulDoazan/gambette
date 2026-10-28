@@ -5,9 +5,7 @@ import { CARROTS_PER_ROUND } from '../../src/domain/sessionConfig';
 import { createPhysicsWorld } from '../../src/core/PhysicsWorld';
 
 const baseDeps = {
-  onOpenSettings: () => {},
   onSessionRestart: () => {},
-  onToggleFullscreen: () => {},
 };
 
 describe('GameScene round flow — score', () => {

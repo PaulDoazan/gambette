@@ -1,4 +1,9 @@
-import { createCalcsStore, randomMulPairs, type Pair } from '@gambette/math-sdk';
+import {
+  createCalcsStore,
+  playersCalcsChanged,
+  randomMulPairs,
+  type Pair,
+} from '@gambette/math-sdk';
 import { readJson, writeJson } from './Storage';
 
 export type RabbitsCount = 4 | 5 | 6 | 7 | 8;
@@ -75,4 +80,14 @@ export function saveSettings(s: Settings): void {
   } catch {
     // Stockage indisponible : réglages conservés en mémoire pour la session.
   }
+}
+
+/** Un réglage qui change la partie a bougé (l'ordre des calculs ne compte pas) : on la relance. */
+export function settingsChanged(a: Settings, b: Settings): boolean {
+  const calcs = (s: Settings) => ({ same: true, A: s.selectedPairs, B: s.selectedPairs });
+  return (
+    a.rabbitsCount !== b.rabbitsCount ||
+    a.tapMode !== b.tapMode ||
+    playersCalcsChanged(calcs(a), calcs(b))
+  );
 }

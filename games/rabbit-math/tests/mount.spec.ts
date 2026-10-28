@@ -4,6 +4,7 @@ import type { GameContext } from '@gambette/game-sdk';
 
 // Pixi Application exige WebGL/Canvas, absent de jsdom : on simule l'app et le préchargement.
 interface FakeApp {
+  stage: Container;
   destroy: ReturnType<typeof vi.fn>;
   ticker: { add: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
   canvas: HTMLCanvasElement;
@@ -78,6 +79,35 @@ describe('rabbitMath.mount / unmount', () => {
     el.querySelector<HTMLButtonElement>('[data-test="game-exit"]')!.click();
     el.querySelector<HTMLButtonElement>('[data-test="game-exit-go"]')!.click();
     expect(c.onExit).toHaveBeenCalledTimes(1);
+    instance.unmount();
+  });
+
+  it('colonne de boutons ronds : quitter, puis l’engrenage', async () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const instance = await rabbitMath.mount(el, ctx());
+    const tests = [...el.querySelectorAll<HTMLButtonElement>('button')]
+      .filter((b) => b.offsetParent !== undefined)
+      .map((b) => b.dataset.test);
+    expect(tests).toContain('game-exit');
+    expect(tests).toContain('rabbit-math-settings');
+    const exit = el.querySelector<HTMLButtonElement>('[data-test="game-exit"]')!;
+    const gear = el.querySelector<HTMLButtonElement>('[data-test="rabbit-math-settings"]')!;
+    expect(exit.getAttribute('aria-label')).toBe('Quitter');
+    expect(gear.style.borderRadius).toBe(exit.style.borderRadius);
+    expect(gear.style.width).toBe(exit.style.width);
+    instance.unmount();
+  });
+
+  it('l’engrenage ouvre les réglages et masque les boutons', async () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const instance = await rabbitMath.mount(el, ctx());
+    const stage = fakeApps[0]!.stage as Container;
+    el.querySelector<HTMLButtonElement>('[data-test="rabbit-math-settings"]')!.click();
+    expect(stage.getChildByLabel('settings', true)).not.toBeNull();
+    const band = el.querySelector<HTMLElement>('[data-test="rabbit-math-buttons"]')!;
+    expect(band.style.display).toBe('none');
     instance.unmount();
   });
 
