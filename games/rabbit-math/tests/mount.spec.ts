@@ -99,6 +99,26 @@ describe('rabbitMath.mount / unmount', () => {
     instance.unmount();
   });
 
+  it('panneau calé sur le bord gauche du jeu, un peu sous son haut, suit le redimensionnement', async () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const rect = (left: number, top: number, width: number, height: number) =>
+      ({ left, top, width, height, right: left + width, bottom: top + height }) as DOMRect;
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rect(0, 0, 900, 560));
+    const instance = await rabbitMath.mount(el, ctx());
+    const canvas = el.querySelector('canvas')!;
+    const box = vi.spyOn(canvas, 'getBoundingClientRect');
+    box.mockReturnValue(rect(28, 72, 844, 400));
+    window.dispatchEvent(new Event('resize'));
+    const band = el.querySelector<HTMLElement>('[data-test="rabbit-math-buttons"]')!;
+    expect(band.style.left).toBe('28px');
+    expect(band.style.top).toBe(`${72 + 400 * 0.15}px`);
+    box.mockReturnValue(rect(0, 0, 900, 416));
+    window.dispatchEvent(new Event('resize'));
+    expect(band.style.top).toBe(`${416 * 0.15}px`);
+    instance.unmount();
+  });
+
   it('l’engrenage ouvre les réglages et masque les boutons', async () => {
     const el = document.createElement('div');
     document.body.appendChild(el);

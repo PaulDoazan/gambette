@@ -70,24 +70,37 @@ const startGame = (rt: Runtime): void => {
   );
 };
 
+/** Haut du panneau sous le haut du jeu, en part de sa hauteur : en haut, sans y coller. */
+const BUTTONS_TOP_RATIO = 0.15;
+
 /**
- * Colonne de boutons ronds en haut à gauche (le lance-pierre occupe le bas), sur un bandeau
- * navy comme math-river : la croix Quitter (SDK), puis plein écran et engrenage.
+ * Colonne de boutons ronds en haut à gauche du jeu (le lance-pierre occupe le bas), sur un
+ * bandeau navy comme math-river : la croix Quitter (SDK), puis plein écran et engrenage.
  */
 const installButtons = (
   el: HTMLElement,
+  canvas: HTMLCanvasElement,
   onExit: () => void,
   onSettings: () => void,
 ): { setHidden(hidden: boolean): void; dispose(): void } => {
   const band = document.createElement('div');
   band.dataset.test = 'rabbit-math-buttons';
   band.style.cssText =
-    'position:absolute;left:0;top:12px;z-index:6;' +
+    'position:absolute;z-index:6;' +
     'display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;' +
     'background:#00274b;border-radius:0 20px 20px 0;';
   const below = document.createElement('div');
   below.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;';
   el.append(band);
+  // Calé sur le canvas, pas sur l'écran : le jeu garde ses proportions, avec des bandes noires.
+  const place = (): void => {
+    const game = canvas.getBoundingClientRect();
+    const host = el.getBoundingClientRect();
+    band.style.left = `${game.left - host.left}px`;
+    band.style.top = `${game.top - host.top + game.height * BUTTONS_TOP_RATIO}px`;
+  };
+  place();
+  window.addEventListener('resize', place);
   const exit = createExitButton(band, onExit, {
     placement: 'inline',
     iconOnly: true,
@@ -120,6 +133,7 @@ const installButtons = (
       below.style.visibility = '';
     },
     dispose: () => {
+      window.removeEventListener('resize', place);
       el.removeEventListener('click', onExitUi);
       exit.dispose();
       band.remove();
@@ -150,6 +164,7 @@ export async function mountRabbitMath(el: HTMLElement, ctx: GameContext): Promis
     cleanups.push(disposeOrientation);
     const buttons = installButtons(
       el,
+      app.canvas,
       () => ctx.onExit(),
       () => openSettings(rt),
     );
