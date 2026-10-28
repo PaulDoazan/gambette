@@ -9,7 +9,11 @@ export const COLORS = {
   signFill: 0xfff8e5,
   outline: 0x111111,
   hudFill: 0xffffff,
-  cogBody: 0xc2c8cd,
+  // Écran de réglages, comme passe-trappe et math-river.
+  overlay: 0x000000,
+  button: 0xffcc5c,
+  buttonText: 0x00274b,
+  switchOff: 0xc9c2b0,
 } as const;
 
 export const STROKE = { thin: 1.5, normal: 2.0, thick: 2.5 } as const;

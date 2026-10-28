@@ -5,8 +5,6 @@ import { createRabbit, type Rabbit } from '../entities/Rabbit';
 import { createSlingshot, type Slingshot } from '../entities/Slingshot';
 import { createMathSign, type MathSign } from '../entities/MathSign';
 import { createCarrotCounter, type CarrotCounter } from '../entities/CarrotCounter';
-import { createGearButton, type GearButton } from '../entities/GearButton';
-import { createFullscreenButton, type FullscreenButton } from '../entities/FullscreenButton';
 import { TREE_PERCHES_BY_COUNT, type Perch } from '../config/dimensions';
 import type { Settings } from '../services/Settings';
 import { CARROTS_PER_ROUND, DEFAULT_DIFFICULTY, ROUNDS_PER_SESSION } from '../domain/sessionConfig';
@@ -19,9 +17,7 @@ import { installRoundFlow, type RoundFlow } from './gameRound';
 export interface GameSceneDeps {
   settings: Settings;
   physics: PhysicsWorld;
-  onOpenSettings(): void;
   onSessionRestart(): void;
-  onToggleFullscreen(): void;
   delay?: (ms: number) => Promise<void>;
 }
 
@@ -40,8 +36,6 @@ interface Parts {
   slingshot: Slingshot;
   sign: MathSign;
   counter: CarrotCounter;
-  gear: GearButton;
-  fullscreen: FullscreenButton;
   rabbits: Rabbit[];
   session: Session;
   perches: ReadonlyArray<Perch>;
@@ -72,8 +66,6 @@ const assembleScene = (deps: GameSceneDeps): Parts => {
   const slingshot = createSlingshot();
   const sign = createMathSign();
   const counter = createCarrotCounter(CARROTS_PER_ROUND - 1);
-  const gear = createGearButton({ onTap: deps.onOpenSettings });
-  const fullscreen = createFullscreenButton({ onTap: deps.onToggleFullscreen });
   const session = newSession(deps.settings);
   const perches = TREE_PERCHES_BY_COUNT[deps.settings.rabbitsCount];
   const rabbits = buildRabbits(session.currentQuestion().choices, perches);
@@ -85,8 +77,6 @@ const assembleScene = (deps: GameSceneDeps): Parts => {
     slingshot,
     sign,
     counter,
-    gear,
-    fullscreen,
     rabbits,
     session,
     perches,
@@ -99,8 +89,6 @@ const attachChildren = (parts: Parts): void => {
   parts.view.addChild(parts.slingshot.view);
   parts.view.addChild(parts.sign.view);
   parts.view.addChild(parts.counter.view);
-  parts.view.addChild(parts.gear.view);
-  parts.view.addChild(parts.fullscreen.view);
   for (const r of parts.rabbits) parts.view.addChild(r.view);
 };
 

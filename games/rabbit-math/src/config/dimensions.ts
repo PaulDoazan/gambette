@@ -55,10 +55,6 @@ export const TREE_PERCHES_BY_COUNT: Record<RabbitsCount, ReadonlyArray<Perch>> =
   ],
 };
 
-export const GEAR_POS = { x: 50, y: 44 } as const;
-export const GEAR_RADIUS = 22;
-export const FULLSCREEN_BTN_POS = { x: 50, y: 115 } as const;
-export const FULLSCREEN_BTN_RADIUS = 22;
 export const MATH_SIGN = {
   x: DESIGN_WIDTH / 2,
   y: 38,
