@@ -79,6 +79,30 @@ describe('generateNetwork', () => {
     }
   });
 
+  it('que des × si les réglages ne proposent que des multiplications, et un seul bon chemin', () => {
+    for (const h of [MIN_BOARD_HEIGHT, MAX_BOARD_HEIGHT]) {
+      configureBoard(h);
+      allMulPairs().forEach((pair, i) => {
+        const k = i % SCREENS;
+        const net = generateNetwork(pair, k, mulberry32(i * 17 + h), ['mul']);
+        const ops = net.nodes.flatMap((n) => (n.kind === 'op' ? [n.op] : []));
+        expect(ops).toEqual(['mul', 'mul', 'mul']);
+        expect(solutions(net), `${pair.a} × ${pair.b}`).toEqual([[...net.solution]]);
+        expect(layoutValid(net, k)).toBe(true);
+      });
+    }
+  });
+
+  it('opérateurs pris parmi ceux des réglages', () => {
+    [...allAddPairs(), ...allSubPairs()].forEach((pair, i) => {
+      const net = generateNetwork(pair, i % SCREENS, mulberry32(i), ['add', 'sub']);
+      const ops = net.nodes.flatMap((n) => (n.kind === 'op' ? [n.op] : []));
+      expect(ops).not.toContain('mul');
+      expect(new Set(ops)).toEqual(new Set(['add', 'sub']));
+      expect(solutions(net)).toEqual([[...net.solution]]);
+    });
+  });
+
   it('plusieurs chemins possibles : il y a de vrais choix à faire', () => {
     const net = generateNetwork({ a: 6, b: 4, op: 'mul' }, 0, mulberry32(9));
     expect(allPaths(net).length).toBeGreaterThanOrEqual(6);

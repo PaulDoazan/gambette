@@ -101,9 +101,11 @@ export function createGameScene(deps: {
     const container = new Container();
     container.label = 'world';
     let previous: Pair | null = null;
+    // Les opérateurs proposés sont ceux des calculs choisis : que des × pour les tables de ×.
+    const ops = [...new Set(deps.pairs.map((p) => p.op))];
     const networks = Array.from({ length: SCREENS }, (_, k) => {
       previous = pickCalc(deps.pairs, previous, rng);
-      return generateNetwork(previous, k, rng);
+      return generateNetwork(previous, k, rng, ops);
     });
     const views = networks.map((n) => createNetworkView(n));
     const ponds = networks.map((n, k) => createPond(n.pond, 11 + k));
