@@ -9,6 +9,9 @@ import passeTrappe3 from '../assets/tutorials/passe-trappe/3.webp';
 import rabbitMath1 from '../assets/tutorials/rabbit-math/1.webp';
 import rabbitMath2 from '../assets/tutorials/rabbit-math/2.webp';
 import rabbitMath3 from '../assets/tutorials/rabbit-math/3.webp';
+import sandTunnel1 from '../assets/tutorials/sand-tunnel/1.webp';
+import sandTunnel2 from '../assets/tutorials/sand-tunnel/2.webp';
+import sandTunnel3 from '../assets/tutorials/sand-tunnel/3.webp';
 import towerMath1 from '../assets/tutorials/tower-math/1.webp';
 import towerMath2 from '../assets/tutorials/tower-math/2.webp';
 import towerMath3 from '../assets/tutorials/tower-math/3.webp';
@@ -74,6 +77,20 @@ const BY_KEY: Record<string, readonly TutorialStep[]> = {
     {
       image: mathRiver3,
       text: 'Remplissez le trou avant que l’eau s’infiltre : le poisson file de trou en trou, jusqu’à la mer !',
+    },
+  ],
+  'sand-tunnel': [
+    {
+      image: sandTunnel1,
+      text: 'Un résultat s’affiche en haut : retrouve le calcul caché dans les galets.',
+    },
+    {
+      image: sandTunnel2,
+      text: 'Pars de la mare et glisse le doigt sur un nombre, un opérateur, puis un nombre : le sable se creuse.',
+    },
+    {
+      image: sandTunnel3,
+      text: 'Bon calcul : l’eau s’engouffre et le poisson file vers le réseau suivant. Sinon, le sable bouche le passage !',
     },
   ],
 };

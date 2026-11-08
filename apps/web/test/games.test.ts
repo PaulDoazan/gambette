@@ -23,13 +23,19 @@ describe('registre de jeux', () => {
 describe('registre de jeux — passe-trappe', () => {
   it('contient passe-trappe avec une consigne, après rabbit-math', () => {
     const keys = registry.list().map((m) => m.meta.key);
-    expect(keys).toEqual(['rabbit-math', 'passe-trappe', 'tower-math', 'math-river']);
+    expect(keys).toEqual([
+      'rabbit-math',
+      'passe-trappe',
+      'tower-math',
+      'math-river',
+      'sand-tunnel',
+    ]);
     expect(registry.get('passe-trappe')!.meta.instructions.length).toBeGreaterThan(0);
   });
 });
 
 describe('registre de jeux — math-river', () => {
-  it('contient math-river avec une consigne, en dernier', () => {
+  it('contient math-river avec une consigne', () => {
     const game = registry.get('math-river');
     expect(game).toBeDefined();
     expect(game!.meta.name).toBe('Math River');
@@ -45,6 +51,17 @@ describe('registre de jeux — joueurs', () => {
       'passe-trappe': 'versus',
       'tower-math': 'solo',
       'math-river': 'coop',
+      'sand-tunnel': 'solo',
     });
+  });
+});
+
+describe('registre de jeux — sand-tunnel', () => {
+  it('contient sand-tunnel avec une consigne, en dernier', () => {
+    const game = registry.get('sand-tunnel');
+    expect(game).toBeDefined();
+    expect(game!.meta.name).toBe('Sand Tunnel');
+    expect(game!.meta.instructions.length).toBeGreaterThan(0);
+    expect(registry.list().at(-1)).toBe(game);
   });
 });

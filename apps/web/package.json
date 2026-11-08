@@ -15,6 +15,7 @@
     "@gambette/game-math-river": "workspace:*",
     "@gambette/game-passe-trappe": "workspace:*",
     "@gambette/game-rabbit-math": "workspace:*",
+    "@gambette/game-sand-tunnel": "workspace:*",
     "@gambette/game-sdk": "workspace:*",
     "@gambette/game-tower-math": "workspace:*",
     "nuxt": "^4.4.8",
