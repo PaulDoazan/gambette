@@ -13,11 +13,12 @@ import {
   FLOW_SPEED,
   RECEDE_SPEED,
   REFILL_MS,
+  RETRACT_SPEED,
   SWIM_SPEED,
   UI_FADE_MS,
 } from '../config/timing';
-import { createDig, judge, type Dig } from '../domain/dig';
-import { generateNetwork, type Network } from '../domain/network';
+import { createDig, judge, posOf, type Dig, type Lead } from '../domain/dig';
+import { POND, generateNetwork, type Network } from '../domain/network';
 import { pickCalc } from '../domain/quiz';
 import { lengthTo, routeLength } from '../domain/route';
 import type { Vec } from '../domain/types';
@@ -149,6 +150,8 @@ export function createGameScene(deps: {
   /** Eau en cours dans la galerie (et le canal, sur un bon chemin). */
   let run: WaterRun | null = null;
   let galleryRoute: Vec[] = [];
+  /** Bout de galerie affiché au-delà du dernier galet : il suit le doigt, et se retire en douceur. */
+  let shown: (Lead & { readonly tip: number }) | null = null;
   /** Distance jusqu'où l'eau doit aller, et celle où le sable bouche la galerie. */
   let flowTarget = 0;
   let blockAt = 0;
@@ -173,12 +176,40 @@ export function createGameScene(deps: {
     for (const n of net().nodes) netView().setNodeState(n.id, 'idle');
   };
 
-  /** Galerie suivant le doigt : de la mare aux galets creusés, puis jusqu'au doigt. */
-  const drawDig = (): void => {
+  /** Rapproche le bout affiché de celui que vise le doigt : il avance aussitôt, recule en douceur. */
+  const followLead = (dtMs: number): void => {
     const path = dig.path();
-    const finger = dig.finger();
+    const tip = path.length > 0 ? path[path.length - 1]! : POND;
+    const target = dig.lead();
+    if (!shown || shown.tip !== tip) {
+      shown = target && { ...target, tip };
+      return;
+    }
+    const back = Math.max(0, shown.len - RETRACT_SPEED * dtMs);
+    if (target && target.toward === shown.toward) {
+      shown = { ...shown, len: Math.max(target.len, back) };
+    } else if (back > 0) {
+      shown = { ...shown, len: back };
+    } else {
+      shown = target && { ...target, tip };
+    }
+  };
+
+  /** Galerie de la mare aux galets creusés, prolongée le long du sillon que suit le doigt. */
+  const drawDig = (dtMs = 0): void => {
+    followLead(dtMs);
+    const path = dig.path();
     const route = [net().pond, ...path.map((id) => net().nodes[id]!.pos)];
-    if (finger) route.push(toWorld(finger));
+    if (shown && shown.len > 0) {
+      const from = route[route.length - 1]!;
+      const to = posOf(net(), shown.toward);
+      const k = shown.len / Math.max(1, Math.hypot(to.x - from.x, to.y - from.y));
+      const tip = { x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k };
+      // En arrière vers le galet précédent : la galerie raccourcit.
+      const previous = path.length >= 2 ? path[path.length - 2]! : POND;
+      if (path.length > 0 && shown.toward === previous) route.pop();
+      route.push(tip);
+    }
     netView().setGallery(route);
     for (const n of net().nodes) {
       netView().setNodeState(n.id, path.includes(n.id) ? 'dug' : 'idle');
@@ -205,6 +236,7 @@ export function createGameScene(deps: {
   const release = (): void => {
     const path = dig.end();
     pointer = null;
+    shown = null;
     const verdict = judge(net(), path);
     const at = path.map((id) => net().nodes[id]!.pos);
     galleryRoute = [net().pond, ...at];
@@ -343,6 +375,7 @@ export function createGameScene(deps: {
   const abandon = (): void => {
     if (pointer === null) return;
     pointer = null;
+    shown = null;
     dig.end();
     if (phase === 'play') backToPlay();
   };
@@ -356,6 +389,7 @@ export function createGameScene(deps: {
     run = null;
     wrongNodes = [];
     galleryRoute = [];
+    shown = null;
     pointer = null;
     won = false;
     ui.alpha = 1;
@@ -398,6 +432,7 @@ export function createGameScene(deps: {
     uiVisible: () => phase !== 'leave' && phase !== 'arrive' && phase !== 'won',
     tick: (deltaMs) => {
       updatePhase(deltaMs);
+      if (phase === 'play' && dig.active()) drawDig(deltaMs);
       world.fish.update(deltaMs);
       for (const p of world.ponds) p.update(deltaMs);
       for (const v of world.views) v.update(deltaMs);

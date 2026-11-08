@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mulberry32 } from '@gambette/math-sdk';
+import { TRACK_MARGIN } from '../../src/config/dimensions';
 import { createDig, judge } from '../../src/domain/dig';
 import { generateNetwork, isLinked, POND } from '../../src/domain/network';
 
@@ -64,6 +65,60 @@ describe('createDig', () => {
     expect(dig.begin({ x: 5, y: 5 })).toBe(false);
     dig.move(at(S));
     expect(dig.path()).toEqual([]);
+  });
+});
+
+/** Point à `t` sur le sillon a → b, décalé de `off` perpendiculairement. */
+const onGroove = (a: { x: number; y: number }, b: { x: number; y: number }, t: number, off = 0) => {
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  const nx = -(b.y - a.y) / len;
+  const ny = (b.x - a.x) / len;
+  return { x: a.x + (b.x - a.x) * t + nx * off, y: a.y + (b.y - a.y) * t + ny * off };
+};
+
+describe('lead : la galerie suit le sillon, pas le doigt', () => {
+  it('le doigt près du sillon : la galerie avance le long du sillon jusqu’à sa hauteur', () => {
+    const dig = createDig(net);
+    dig.begin(net.pond);
+    dig.move(at(S));
+    const len = Math.hypot(at(O).x - at(S).x, at(O).y - at(S).y);
+    dig.move(onGroove(at(S), at(O), 0.5, TRACK_MARGIN * 0.6));
+    const lead = dig.lead();
+    expect(lead?.toward).toBe(O);
+    expect(lead!.len).toBeCloseTo(len / 2, 0);
+  });
+
+  it('le doigt s’écarte trop : plus de bout de galerie, elle s’arrête au dernier galet', () => {
+    const dig = createDig(net);
+    dig.begin(net.pond);
+    dig.move(at(S));
+    // Loin de tout sillon : au-delà de la mare, dans le coin opposé.
+    dig.move({ x: at(S).x - 400, y: at(S).y + 400 });
+    expect(dig.lead()).toBeNull();
+    expect(dig.path()).toEqual([S]);
+  });
+
+  it('en arrière vers le galet précédent : la galerie raccourcit', () => {
+    const dig = createDig(net);
+    dig.begin(net.pond);
+    dig.move(at(S));
+    dig.move(at(O));
+    dig.move(onGroove(at(O), at(S), 0.4));
+    expect(dig.lead()?.toward).toBe(S);
+  });
+
+  it('seuls les sillons du dernier galet comptent : un sillon voisin n’attire pas la galerie', () => {
+    const dig = createDig(net);
+    dig.begin(net.pond);
+    dig.move(at(S));
+    for (const [a, b] of net.links) {
+      if (a === S) continue;
+      const p = onGroove(at(a), at(b), 0.5);
+      dig.move(p);
+      const lead = dig.lead();
+      if (lead) expect(lead.toward === POND || isLinked(net, S, lead.toward)).toBe(true);
+      expect(dig.path()).toEqual([S]);
+    }
   });
 });
 
