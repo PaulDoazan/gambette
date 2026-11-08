@@ -67,10 +67,20 @@ export const RESULT_PANEL = { x: DESIGN_WIDTH / 2, y: 110, w: 300, h: 96 } as co
 
 /** Zone où poser les galets, dans un écran (le bandeau des boutons est au bord gauche). */
 export const networkArea = (): { minX: number; maxX: number; minY: number; maxY: number } => ({
-  minX: 150,
-  maxX: 590,
+  minX: 70,
+  maxX: 650,
   minY: RESULT_PANEL.y + RESULT_PANEL.h / 2 + NODE_RADIUS + 24,
   maxY: DESIGN_HEIGHT - 70,
+});
+
+/**
+ * Bandeau des boutons (Quitter, plein écran, réglages), au bord gauche au milieu de l'écran : zone
+ * large, pour tenir sur les écrans étroits où il paraît plus grand. Aucun galet ne s'y pose.
+ */
+export const uiBand = (): { maxX: number; minY: number; maxY: number } => ({
+  maxX: 120,
+  minY: DESIGN_HEIGHT / 2 - 170,
+  maxY: DESIGN_HEIGHT / 2 + 170,
 });
 
 /** Hauteur de plateau qui remplit un écran `width` × `height` (bornée à [MIN, MAX]). */
