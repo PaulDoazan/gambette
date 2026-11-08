@@ -82,15 +82,15 @@ const BY_KEY: Record<string, readonly TutorialStep[]> = {
   'sand-tunnel': [
     {
       image: sandTunnel1,
-      text: 'Un résultat s’affiche en haut : retrouve le calcul caché dans les galets.',
+      text: 'Quel calcul donne ce résultat ?',
     },
     {
       image: sandTunnel2,
-      text: 'Pars de la mare et glisse le doigt sur un nombre, un opérateur, puis un nombre : le sable se creuse.',
+      text: 'Trace le chemin avec ton doigt.',
     },
     {
       image: sandTunnel3,
-      text: 'Bon calcul : l’eau s’engouffre et le poisson file vers le réseau suivant. Sinon, le sable bouche le passage !',
+      text: 'Bon chemin : le poisson passe !',
     },
   ],
 };
