@@ -8,6 +8,7 @@ import {
   exitOf,
   networkArea,
   pondOf,
+  uiBand,
 } from '../config/dimensions';
 import { dist, distToSegment } from './route';
 import type { Vec } from './types';
@@ -39,15 +40,36 @@ export const POND = -1;
 
 const ROW = 3;
 export const OPS: readonly Op[] = ['add', 'sub', 'mul'];
-/** Place des rangées le long de l'axe mare → sortie, et écart entre deux galets d'une rangée. */
-const ROW_T = [0.24, 0.5, 0.76] as const;
-const SPREAD = 170;
+/**
+ * Écartements essayés, du plus large au plus serré : on garde le plus large qui tient à l'écran.
+ * `rows` : place des rangées le long de l'axe ; `spread` : écart entre deux galets d'une rangée.
+ */
+interface Spread {
+  readonly rows: readonly [number, number, number];
+  readonly spread: number;
+}
+/** Écartement de secours : le plus serré, qui tient sur tous les écrans. */
+const TIGHT: Spread = { rows: [0.24, 0.5, 0.76], spread: 170 };
+const SPREADS: readonly Spread[] = [
+  { rows: [0.2, 0.5, 0.8], spread: 260 },
+  { rows: [0.2, 0.5, 0.8], spread: 230 },
+  { rows: [0.22, 0.5, 0.78], spread: 200 },
+  TIGHT,
+];
 const JITTER = 36;
 /** Marges : entre deux galets, et entre un galet et un sillon qui ne le concerne pas. */
 const NODE_GAP = 26;
 const GROOVE_CLEARANCE = NODE_RADIUS + 14;
 const ATTEMPTS = 400;
-const LAYOUTS_PER_ATTEMPT = 40;
+const LAYOUTS_PER_SPREAD = 12;
+
+/** Écart minimal entre un galet et le bandeau des boutons. */
+const BAND_GAP = 6;
+/** Un galet à la hauteur `y` est à côté du bandeau des boutons. */
+const besideBand = (y: number): boolean => {
+  const band = uiBand();
+  return y > band.minY - NODE_RADIUS && y < band.maxY + NODE_RADIUS;
+};
 
 const idOf = (row: number, slot: number): number => row * ROW + slot;
 
@@ -131,11 +153,20 @@ function channels(k: number): Array<[Vec, Vec]> {
   ];
 }
 
-/** Galets bien séparés, hors de la mare, de la sortie et des canaux ; aucun sillon ne passe dessus. */
+/** Galets bien séparés, hors du bandeau des boutons, de la mare, de la sortie et des canaux ; aucun sillon ne passe dessus. */
 export function layoutValid(net: Network, k: number): boolean {
   const { nodes, pond, exit } = net;
+  const band = uiBand();
   for (let i = 0; i < nodes.length; i++) {
     const p = nodes[i]!.pos;
+    const x = p.x - k * DESIGN_WIDTH;
+    if (
+      x < band.maxX + NODE_RADIUS &&
+      p.y > band.minY - NODE_RADIUS &&
+      p.y < band.maxY + NODE_RADIUS
+    ) {
+      return false;
+    }
     if (dist(p, pond) < POND_RADIUS + NODE_RADIUS + 24) return false;
     if (dist(p, exit) < EXIT_RADIUS + NODE_RADIUS + 30) return false;
     for (let j = i + 1; j < nodes.length; j++) {
@@ -161,24 +192,28 @@ export function layoutValid(net: Network, k: number): boolean {
 }
 
 /** Galets en trois bandes le long de l'axe mare → sortie, décalés de `jitter` au plus. */
-function place(net: Network, k: number, jitter: number, rng: Rng): void {
+function place(net: Network, k: number, sp: Spread, jitter: number, rng: Rng): void {
   const { pond, exit } = net;
   const len = dist(pond, exit);
   const d = { x: (exit.x - pond.x) / len, y: (exit.y - pond.y) / len };
   // Perpendiculaire orientée pour que la place 0 soit toujours du même côté.
   const n = { x: -d.y, y: d.x };
   const area = networkArea();
+  const band = uiBand();
   const ox = k * DESIGN_WIDTH;
   for (const node of net.nodes) {
     const row = Math.floor(node.id / ROW);
     const slot = node.id % ROW;
-    const t = ROW_T[row]!;
-    const off = (slot - 1) * SPREAD;
+    const t = sp.rows[row]!;
+    const off = (slot - 1) * sp.spread;
     const x = pond.x + d.x * len * t + n.x * off + (rng() * 2 - 1) * jitter;
     const y = pond.y + d.y * len * t + n.y * off + (rng() * 2 - 1) * jitter;
+    const cy = Math.min(area.maxY, Math.max(area.minY, y));
+    // À hauteur du bandeau des boutons, le galet est repoussé à sa droite.
+    const minX = besideBand(cy) ? band.maxX + NODE_RADIUS + BAND_GAP : area.minX;
     node.pos = {
-      x: Math.min(ox + area.maxX, Math.max(ox + area.minX, x)),
-      y: Math.min(area.maxY, Math.max(area.minY, y)),
+      x: Math.min(ox + area.maxX, Math.max(ox + minX, x)),
+      y: cy,
     };
   }
 }
@@ -264,13 +299,15 @@ export function generateNetwork(
     const net = draft(pair, k, rng, allowed);
     if (solutions(net).length !== 1) continue;
     fallback ??= net;
-    for (let l = 0; l < LAYOUTS_PER_ATTEMPT; l++) {
-      place(net, k, JITTER, rng);
-      if (layoutValid(net, k)) return net;
+    for (const sp of SPREADS) {
+      for (let l = 0; l < LAYOUTS_PER_SPREAD; l++) {
+        place(net, k, sp, JITTER, rng);
+        if (layoutValid(net, k)) return net;
+      }
     }
   }
   // Filet de sécurité : galets à leur place exacte, liaisons gênantes retirées.
   const net = forceUnique(fallback ?? draft(pair, k, rng, allowed));
-  place(net, k, 0, rng);
+  place(net, k, TIGHT, 0, rng);
   return net;
 }

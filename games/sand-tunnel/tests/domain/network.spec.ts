@@ -11,8 +11,10 @@ import {
 import {
   MAX_BOARD_HEIGHT,
   MIN_BOARD_HEIGHT,
+  NODE_RADIUS,
   SCREENS,
   configureBoard,
+  uiBand,
 } from '../../src/config/dimensions';
 import {
   POND,
@@ -108,12 +110,22 @@ describe('generateNetwork', () => {
     expect(allPaths(net).length).toBeGreaterThanOrEqual(6);
   });
 
-  it('les galets restent dans leur écran', () => {
-    for (let k = 0; k < SCREENS; k++) {
-      const net = generateNetwork({ a: 5, b: 5, op: 'add' }, k, mulberry32(k));
-      for (const n of net.nodes) {
-        expect(n.pos.x).toBeGreaterThan(k * 720 + 100);
-        expect(n.pos.x).toBeLessThan(k * 720 + 640);
+  it('les galets restent entiers dans leur écran, à côté du bandeau des boutons', () => {
+    for (const h of [MIN_BOARD_HEIGHT, MAX_BOARD_HEIGHT]) {
+      configureBoard(h);
+      const band = uiBand();
+      for (let k = 0; k < SCREENS; k++) {
+        for (let seed = 0; seed < 20; seed++) {
+          const net = generateNetwork({ a: 5, b: 5, op: 'add' }, k, mulberry32(seed + k * 100));
+          for (const n of net.nodes) {
+            const x = n.pos.x - k * 720;
+            expect(x - NODE_RADIUS).toBeGreaterThan(0);
+            expect(x + NODE_RADIUS).toBeLessThan(720);
+            const besideBand =
+              n.pos.y > band.minY - NODE_RADIUS && n.pos.y < band.maxY + NODE_RADIUS;
+            if (besideBand) expect(x - NODE_RADIUS).toBeGreaterThan(band.maxX);
+          }
+        }
       }
     }
   });
