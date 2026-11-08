@@ -1,4 +1,4 @@
-import { HIT_RADIUS, POND_RADIUS } from '../config/dimensions';
+import { HIT_RADIUS, POND_RADIUS, TRACK_MARGIN } from '../config/dimensions';
 import { POND, isLinked, type Network } from './network';
 import { dist } from './route';
 import type { Vec } from './types';
@@ -21,6 +21,18 @@ export interface Dig {
   path(): readonly number[];
   /** Position du doigt pendant le geste. */
   finger(): Vec | null;
+  /**
+   * Bout de galerie entre le dernier galet creusé et le doigt, le long du sillon le plus proche du
+   * doigt (vers un galet relié, ou en arrière vers le précédent). Null si le doigt s'écarte de plus
+   * de TRACK_MARGIN de tous ces sillons : la galerie s'arrête alors au dernier galet.
+   */
+  lead(): Lead | null;
+}
+
+/** Bout de galerie : vers `toward` (un id, ou POND en arrière), sur `len` depuis le dernier galet. */
+export interface Lead {
+  readonly toward: number;
+  readonly len: number;
 }
 
 const nodeAt = (net: Network, p: Vec): number => {
@@ -36,6 +48,10 @@ const nodeAt = (net: Network, p: Vec): number => {
   return best;
 };
 
+/** Point de `net` : la mare, ou un galet. */
+export const posOf = (net: Network, id: number): Vec =>
+  id === POND ? net.pond : net.nodes[id]!.pos;
+
 /** Geste de creusage sur le réseau `net` : nombre, opérateur, nombre, en suivant les sillons. */
 export function createDig(net: Network): Dig {
   let path: number[] = [];
@@ -44,6 +60,33 @@ export function createDig(net: Network): Dig {
   const tip = (): number => (path.length > 0 ? path[path.length - 1]! : POND);
   const previous = (): number => (path.length >= 2 ? path[path.length - 2]! : POND);
   const inPond = (p: Vec): boolean => dist(p, net.pond) <= POND_RADIUS;
+
+  /** Sillons depuis le dernier galet : vers l'avant (galets reliés), et le retour au précédent. */
+  const lead = (): Lead | null => {
+    if (!finger) return null;
+    const from = posOf(net, tip());
+    const towards =
+      path.length < 3
+        ? net.nodes.map((n) => n.id).filter((id) => isLinked(net, tip(), id) && !path.includes(id))
+        : [];
+    if (path.length > 0) towards.push(previous());
+    let best: Lead | null = null;
+    let bestD = TRACK_MARGIN;
+    for (const toward of towards) {
+      const to = posOf(net, toward);
+      const len = dist(from, to);
+      if (len === 0) continue;
+      const ux = (to.x - from.x) / len;
+      const uy = (to.y - from.y) / len;
+      const along = Math.min(len, Math.max(0, (finger.x - from.x) * ux + (finger.y - from.y) * uy));
+      const d = dist(finger, { x: from.x + ux * along, y: from.y + uy * along });
+      if (d <= bestD) {
+        bestD = d;
+        best = { toward, len: along };
+      }
+    }
+    return best;
+  };
 
   return {
     begin: (p) => {
@@ -84,6 +127,7 @@ export function createDig(net: Network): Dig {
     active: () => finger !== null,
     path: () => path,
     finger: () => finger,
+    lead,
   };
 }
 

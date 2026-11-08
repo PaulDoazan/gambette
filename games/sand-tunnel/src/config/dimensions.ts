@@ -23,6 +23,11 @@ export const CHANNEL_WIDTH = 40;
 /** Galets du réseau : rayon d'un nombre, demi-côté d'un opérateur, rayon de prise du doigt. */
 export const NODE_RADIUS = 42;
 export const OP_HALF = 38;
+/**
+ * Écart toléré entre le doigt et un sillon : la galerie suit le sillon tant que le doigt en reste
+ * à moins de cette distance. Plus petit que l'écart garanti entre un sillon et un galet étranger.
+ */
+export const TRACK_MARGIN = 52;
 export const HIT_RADIUS = 58;
 /** Largeur d'une galerie creusée, et d'un sillon (liaison possible). */
 export const GALLERY_WIDTH = 34;

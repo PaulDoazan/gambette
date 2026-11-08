@@ -10,3 +10,6 @@ export const REFILL_MS = 600;
 export const SWIM_SPEED = 0.42;
 /** Effacement (et retour) du panneau du résultat et des boutons pendant la transition. */
 export const UI_FADE_MS = 300;
+
+/** Vitesse (px/ms) à laquelle la galerie revient au dernier galet quand le doigt quitte le sillon. */
+export const RETRACT_SPEED = 0.9;

@@ -38,7 +38,7 @@ export interface Network {
 export const POND = -1;
 
 const ROW = 3;
-const OPS: readonly Op[] = ['add', 'sub', 'mul'];
+export const OPS: readonly Op[] = ['add', 'sub', 'mul'];
 /** Place des rangées le long de l'axe mare → sortie, et écart entre deux galets d'une rangée. */
 const ROW_T = [0.24, 0.5, 0.76] as const;
 const SPREAD = 170;
@@ -183,8 +183,25 @@ function place(net: Network, k: number, jitter: number, rng: Rng): void {
   }
 }
 
+/**
+ * Opérateurs des 3 galets du milieu, celui du calcul à la place `good` : les autres sont pris parmi
+ * `allowed` (les opérateurs des réglages), distincts tant qu'il y en a assez. Que des × si les
+ * réglages ne proposent que des multiplications.
+ */
+function opsRow(op: Op, good: number, allowed: readonly Op[], rng: Rng): Op[] {
+  const pool = allowed.includes(op) ? allowed : [...allowed, op];
+  const others = shuffle(
+    pool.filter((o) => o !== op),
+    rng,
+  );
+  while (others.length < ROW - 1) others.push(pickFrom(pool, rng));
+  const ops = others.slice(0, ROW - 1);
+  ops.splice(good, 0, op);
+  return ops;
+}
+
 /** Un essai : le calcul, ses leurres et ses liaisons, sans placement. */
-function draft(pair: Pair, k: number, rng: Rng): Network {
+function draft(pair: Pair, k: number, rng: Rng, allowed: readonly Op[]): Network {
   const goodStart = Math.floor(rng() * ROW);
   const goodOp = nearSlot(goodStart, rng);
   const goodEnd = nearSlot(goodOp, rng);
@@ -192,11 +209,7 @@ function draft(pair: Pair, k: number, rng: Rng): Network {
   starts.splice(goodStart, 0, pair.a);
   const ends = decoys(pair.b, ROW - 1, rng);
   ends.splice(goodEnd, 0, pair.b);
-  const ops = shuffle(
-    OPS.filter((o) => o !== pair.op),
-    rng,
-  );
-  ops.splice(goodOp, 0, pair.op);
+  const ops = opsRow(pair.op, goodOp, allowed, rng);
   const origin = { x: 0, y: 0 };
   const nodes: NetNode[] = [
     ...starts.map((value, j): NetNode => ({ id: idOf(0, j), kind: 'start', value, pos: origin })),
@@ -237,12 +250,18 @@ function forceUnique(net: Network): Network {
 
 /**
  * Réseau de l'écran `k` pour le calcul `pair` : un seul chemin donne son résultat, et une mauvaise
- * option ne coupe jamais le bon chemin (aucun galet sur un sillon qui ne le concerne pas).
+ * option ne coupe jamais le bon chemin (aucun galet sur un sillon qui ne le concerne pas). Les
+ * opérateurs proposés sont pris parmi `allowed`.
  */
-export function generateNetwork(pair: Pair, k: number, rng: Rng): Network {
+export function generateNetwork(
+  pair: Pair,
+  k: number,
+  rng: Rng,
+  allowed: readonly Op[] = OPS,
+): Network {
   let fallback: Network | null = null;
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-    const net = draft(pair, k, rng);
+    const net = draft(pair, k, rng, allowed);
     if (solutions(net).length !== 1) continue;
     fallback ??= net;
     for (let l = 0; l < LAYOUTS_PER_ATTEMPT; l++) {
@@ -251,7 +270,7 @@ export function generateNetwork(pair: Pair, k: number, rng: Rng): Network {
     }
   }
   // Filet de sécurité : galets à leur place exacte, liaisons gênantes retirées.
-  const net = forceUnique(fallback ?? draft(pair, k, rng));
+  const net = forceUnique(fallback ?? draft(pair, k, rng, allowed));
   place(net, k, 0, rng);
   return net;
 }
