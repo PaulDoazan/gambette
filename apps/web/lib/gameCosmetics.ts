@@ -4,6 +4,7 @@
 import mathRiverThumb from '../assets/thumbnails/math-river.svg';
 import passeTrappeThumb from '../assets/thumbnails/passe-trappe.svg';
 import rabbitMathThumb from '../assets/thumbnails/rabbit-math.svg';
+import sandTunnelThumb from '../assets/thumbnails/sand-tunnel.svg';
 import towerMathThumb from '../assets/thumbnails/tower-math.svg';
 
 export interface GameCosmetic {
@@ -41,6 +42,12 @@ const BY_KEY: Record<string, GameCosmetic> = {
     icon: 'mdi-fish',
     thumbnail: mathRiverThumb,
     band: '#1f6fa8',
+  },
+  'sand-tunnel': {
+    color: 'tertiary',
+    icon: 'mdi-shovel',
+    thumbnail: sandTunnelThumb,
+    band: '#8f6c3a',
   },
 };
 
