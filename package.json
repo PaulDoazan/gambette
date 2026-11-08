@@ -16,6 +16,7 @@
     "dev:passe-trappe": "pnpm --filter @gambette/game-passe-trappe dev",
     "dev:tower-math": "pnpm --filter @gambette/game-tower-math dev",
     "dev:math-river": "pnpm --filter @gambette/game-math-river dev",
+    "dev:sand-tunnel": "pnpm --filter @gambette/game-sand-tunnel dev",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
